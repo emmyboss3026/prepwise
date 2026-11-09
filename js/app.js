@@ -316,6 +316,8 @@ const priceLog=()=>PWP.cleanLog(S.settings.priceLog);
 const shortName=n=>String(n).replace(/\s*\([^)]*\)\s*$/,"");
 const perUnit=u=>"/ "+PWP.UNIT_LABEL[u];
 const ageText=a=>a<=0?"today":a===1?"yesterday":a+" days ago";
+/* Typed store names match known ones ignoring case, so "hofer" and "HOFER" are one store. */
+const canonStore=t=>{const k=PWP.storeKey(t);return [...STORE_OPTS.map(o=>o[1]),...PWP.knownStores(priceLog())].find(n=>PWP.storeKey(n)===k)||String(t).trim()};
 function savePriceLog(log){S.settings.priceLog=log;putSettings()}
 function viewPrices(){
   const log=priceLog(),td=today(),d=S.priceDraft||null,open=!!S.pricesOpen||!!d;
@@ -362,7 +364,7 @@ function readPriceForm(){
   return {itemKey:other?"":sel,itemName:other?$("#pr-name").value:(it?shortName(it[2]):""),store:$("#pr-store").value,total:$("#pr-total").value,amount:$("#pr-amount").value,date:$("#pr-date").value,promo:$("#pr-promo").checked,id:(S.priceDraft||{}).id};
 }
 function submitPrice(){
-  const f=readPriceForm(),r=PWP.makeObs(f,today(),"p-"+Date.now().toString(36)+Math.random().toString(36).slice(2,6));
+  const f=readPriceForm();f.store=canonStore(f.store);const r=PWP.makeObs(f,today(),"p-"+Date.now().toString(36)+Math.random().toString(36).slice(2,6));
   if(!r.ok){$("#pr-msg").textContent=r.error;return}
   const u=PWP.upsertObs(priceLog(),r.obs);
   if(!u.ok){$("#pr-msg").textContent=u.error;return}

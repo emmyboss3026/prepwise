@@ -48,15 +48,11 @@ function hostileState(td) {
       plan: { breakfast: Q, lunch: R },
       recipes: { evil: evilRecipe(P), [Q]: evilRecipe(R), Pancakes: { name: P, servingLabel: Q } },
       customItems: [{ id: Q, name: P, buy: R, price: P, store: Q }, { id: R, name: Q, buy: P, price: R, store: "NOPE" + P }],
-<<<<<<< HEAD
-      hiddenItems: [P], tripBudgets: { [td]: P, [P]: Q, x: R }
-=======
-      hiddenItems: [P],
+      hiddenItems: [P], tripBudgets: { [td]: P, [P]: Q, x: R },
       priceLog: [
         { id: R, item: Q, name: P, store: R, total: 1, amount: Q, base: 1, unit: "kg", price: 1, date: td, cur: "EUR", promo: 0 },
         { id: Q, item: Q, name: P, store: P, total: 2, amount: R, base: 1, unit: "kg", price: 2, date: td, cur: "EUR", promo: 1 }
       ]
->>>>>>> ab900ec (2.4 price history: normalised unit prices, cheapest recorded store (WIP))
     },
     log: { [td]: { breakfast: { meal: P, eaten: true }, lunch: { meal: Q }, dinner: { meal: R, eaten: true }, extra: { kcal: Q } }, [P]: { dinner: { meal: R } } },
     weights: { [P]: 80, [td]: 81 }

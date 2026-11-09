@@ -8,7 +8,8 @@ Plain static site, no build step:
 - `vercel.json` — clean URLs and two security headers
 
 Run locally: `npx serve .` (or any static server), then open http://localhost:3000.
-Deploy: `vercel --prod` from this folder, or connect a GitHub repo to the Vercel project.
+Code: https://github.com/emmyboss3026/prepwise — pushing to `main` deploys to production once the Vercel project is connected to this repo (Vercel → prepwise → Settings → Git).
+Manual deploy: `vercel --prod` from this folder.
 
 ## Tabs
 Shop (grocery list with "I have it"/"Bought", price paid, store, totals, spending history, editable list) ·

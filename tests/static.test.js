@@ -56,3 +56,6 @@ test("user data is rendered through esc() in the new dashboard", () => {
   assert.match(home, /esc\(nm\)/);
   assert.match(home, /esc\(m\.name\)/);
 });
+test("styles: the hidden attribute always wins over component display rules", () => {
+  assert.match(css, /\[hidden\]\{display:none!important\}/);
+});

@@ -285,13 +285,31 @@ function tripOptions(sel){
   list.sort().reverse();
   return list.map(t=>`<option value="${esc(t)}" ${t===sel?"selected":""}>${fmtDate(t,{day:"numeric",month:"short",year:"numeric"})}${t===cur?" (current)":""}</option>`).join("");
 }
+/* Visual grocery thumbnails: local illustrated fallbacks, optional user-supplied HTTPS photos. */
+const GROCERY_ART=[
+  [/chicken|beef|meat|fish|salmon|turkey|tuna/i,"🍗"],
+  [/egg/i,"🥚"],[/milk|yogurt|skyr|topfen|cream|cheese|butter|parmesan/i,"🥛"],
+  [/potato/i,"🥔"],[/tomato|passata|paste/i,"🍅"],[/corn/i,"🌽"],
+  [/tortilla|bread|wrap/i,"🫓"],[/oat|flour|rice|pasta|spaghetti/i,"🌾"],
+  [/vegetable|veg|broccoli|pepper|onion|carrot/i,"🥦"],
+  [/apple|banana|orange|fruit|pineapple/i,"🍎"],
+  [/oil|mayo|sauce|sriracha|worc|chilli|spice|salt/i,"🫙"],
+  [/chocolate|cocoa/i,"🍫"],[/nut|cashew|almond/i,"🥜"]
+];
+function groceryThumb(i){
+  const c=(S.settings.customItems||[]).find(x=>x.id===i[0]);
+  const url=c&&typeof c.imageUrl==="string"&&/^https:\/\/[^\\s<>"']+$/i.test(c.imageUrl)?c.imageUrl:"";
+  if(url)return `<span class="grocery-thumb"><img src="${esc(url)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.hidden=true;this.nextElementSibling.hidden=false"><span class="grocery-thumb-fallback" hidden aria-hidden="true">🛒</span></span>`;
+  const match=GROCERY_ART.find(([pattern])=>pattern.test(i[2]));
+  return `<span class="grocery-thumb" aria-hidden="true"><span class="grocery-thumb-fallback">${match?match[1]:"🛒"}</span></span>`;
+}
 function itemRow(i,extra){
   const [id,,name,buy,price,src]=i;const r=(S.items[S.trip]||{})[id]||{};const st=r.status==="have"||r.status==="bought"?r.status:"";
   const right=st==="bought"&&r.paid!=null?`${eur(r.paid)}<small>you paid</small>`:st==="have"?`${eur(price)}<small>at home</small>`:`${eur(price)}<small>${src==="est"?"est.":"store price"}</small>`;
   const diff=st==="bought"&&r.paid!=null?(price-r.paid>=0?`<span class="diff save">${eur(price-r.paid)} under my price</span>`:`<span class="diff more">${eur(r.paid-price)} over my price</span>`):"";
   const tag=src==="offer"?'<span class="tag offer">Offer to 18 Nov</span>':"";
   return `<li class="item${st?" is-"+st:""}">
-    <span><span class="name">${esc(name)}</span><span class="meta">${extra}</span>${tag}</span>
+    <span class="grocery-product">${groceryThumb(i)}<span class="grocery-product-info"><span class="name">${esc(name)}</span><span class="meta">${extra}</span>${tag}</span></span>
     <span class="price">${right}</span>
     <span class="acts">
       <button type="button" class="chip have" data-act="status" data-id="${esc(id)}" data-st="have" aria-pressed="${st==="have"}">I have it</button>
@@ -327,7 +345,7 @@ function viewShop(){
         <label class="f" for="ni-name">Item<input type="text" id="ni-name" required maxlength="80" placeholder="e.g. Greek yogurt 1 kg"></label>
         <label class="f" for="ni-buy">How much to buy<input type="text" id="ni-buy" maxlength="40" placeholder="e.g. 2 tubs"></label>
         <label class="f" for="ni-price">Expected price, €<input type="text" inputmode="decimal" id="ni-price" placeholder="e.g. 2,49"></label>
-        <label class="f" for="ni-store">Store<select id="ni-store">${STORE_OPTS.map(([v,l])=>`<option value="${v}">${l}</option>`).join("")}</select></label>
+        <label class="f" for="ni-image">Product image URL (optional)<input type="url" id="ni-image" maxlength="500" placeholder="https://example.com/product.jpg"></label>\n        <label class="f" for="ni-store">Store<select id="ni-store">${STORE_OPTS.map(([v,l])=>`<option value="${v}">${l}</option>`).join("")}</select></label>
         <div class="row"><button class="btn" type="submit">Add to list</button></div>
       </form>
       ${(S.settings.hiddenItems||[]).length?`<p class="small muted">${S.settings.hiddenItems.length} of my default items are hidden. <button class="chip" type="button" data-act="unhide">Show them again</button></p>`:""}</section>`;
@@ -605,7 +623,7 @@ main.addEventListener("change",e=>{
 main.addEventListener("submit",e=>{
   const fm=e.target.dataset.form;
   if(fm==="additem"){e.preventDefault();const name=$("#ni-name").value.trim();if(!name)return;
-    const c={id:"u-"+Date.now().toString(36),name:name.slice(0,80),buy:$("#ni-buy").value.trim().slice(0,40),price:num($("#ni-price").value)||0,store:$("#ni-store").value};
+    const c={id:"u-"+Date.now().toString(36),name:name.slice(0,80),buy:$("#ni-buy").value.trim().slice(0,40),price:num($("#ni-price").value)||0,store:$("#ni-store").value,imageUrl:(()=>{const u=$("#ni-image").value.trim();return /^https:\/\/[^\\s<>"\x27]+$/i.test(u)?u.slice(0,500):""})()};
     S.settings.customItems=(S.settings.customItems||[]).concat([c]);putSettings();toast("Added to your list");render();return}
   if(fm==="recipe"){e.preventDefault();saveRecipe();return}
   if(fm!=="weight")return;e.preventDefault();

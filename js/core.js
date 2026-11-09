@@ -74,6 +74,20 @@
 
   /* ---------- Persistence and migration ---------- */
   function emptyState() { return { items: {}, settings: {}, log: {}, weights: {} }; }
+  /* Stored or synced data is untrusted: drop keys that could reach Object.prototype, and keep weights numeric. */
+  const BAD_KEYS = ["__proto__", "constructor", "prototype"];
+  function stripProto(o, depth) {
+    if (!o || typeof o !== "object" || depth < 0) return o;
+    if (Array.isArray(o)) { o.forEach(x => stripProto(x, depth - 1)); return o; }
+    BAD_KEYS.forEach(k => { if (Object.prototype.hasOwnProperty.call(o, k)) delete o[k]; });
+    Object.keys(o).forEach(k => stripProto(o[k], depth - 1));
+    return o;
+  }
+  function cleanWeights(w) {
+    const o = {};
+    Object.keys(w).forEach(k => { const n = Number(w[k]); if (w[k] !== null && w[k] !== "" && isFinite(n)) o[k] = n; });
+    return o;
+  }
   /* Accepts the raw localStorage string (or null). Never throws; missing or wrong-typed
      keys fall back to empty so older saves keep working. */
   function normalizeLocal(raw) {
@@ -82,8 +96,9 @@
     try { d = JSON.parse(raw || "{}"); } catch (e) { return out; }
     if (!d || typeof d !== "object" || Array.isArray(d)) return out;
     ["items", "settings", "log", "weights"].forEach(k => {
-      if (d[k] && typeof d[k] === "object" && !Array.isArray(d[k])) out[k] = d[k];
+      if (d[k] && typeof d[k] === "object" && !Array.isArray(d[k])) out[k] = stripProto(d[k], 6);
     });
+    out.weights = cleanWeights(out.weights);
     return out;
   }
   function serializeLocal(s) { return JSON.stringify({ items: s.items, settings: s.settings, log: s.log, weights: s.weights }); }
@@ -91,10 +106,11 @@
   /* Supabase rows (mp_items, mp_settings, mp_log, mp_weights) to app state. */
   function mapCloud(itemRows, settingsRow, logRows, weightRows) {
     const out = emptyState();
-    (itemRows || []).forEach(r => { (out.items[r.trip_date] = out.items[r.trip_date] || {})[r.item_id] = { status: r.status || "", paid: r.paid == null ? null : Number(r.paid), store: r.store || "" }; });
-    out.settings = (settingsRow && settingsRow.data) || {};
-    (logRows || []).forEach(r => { (out.log[r.day] = out.log[r.day] || {})[r.slot] = { meal: r.meal, eaten: r.eaten, kcal: r.kcal }; });
-    (weightRows || []).forEach(r => { out.weights[r.day] = Number(r.kg); });
+    const ok = (...ks) => ks.every(k => BAD_KEYS.indexOf(k) < 0);
+    (itemRows || []).forEach(r => { if (!ok(r.trip_date, r.item_id)) return; (out.items[r.trip_date] = out.items[r.trip_date] || {})[r.item_id] = { status: r.status || "", paid: r.paid == null ? null : Number(r.paid), store: r.store || "" }; });
+    out.settings = stripProto((settingsRow && settingsRow.data) || {}, 6);
+    (logRows || []).forEach(r => { if (!ok(r.day, r.slot)) return; (out.log[r.day] = out.log[r.day] || {})[r.slot] = { meal: r.meal, eaten: r.eaten, kcal: r.kcal }; });
+    (weightRows || []).forEach(r => { if (ok(r.day) && isFinite(Number(r.kg))) out.weights[r.day] = Number(r.kg); });
     return out;
   }
 

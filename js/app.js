@@ -104,6 +104,7 @@ function fmtDate(s,opt){return parse(s).toLocaleDateString("en-GB",opt||{weekday
 function toast(msg){document.querySelectorAll(".toast").forEach(x=>x.remove());const t=document.createElement("div");t.className="toast";t.setAttribute("role","status");t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),2400)}
 const ic=n=>`<svg class="ic" aria-hidden="true"><use href="#i-${n}"/></svg>`;
 const SLOT_IC={breakfast:"sun",lunch:"bowl",dinner:"moon",snack:"bolt"};
+const slotIc=sl=>ic(Object.prototype.hasOwnProperty.call(SLOT_IC,sl)?SLOT_IC[sl]:"bowl");
 const reduceMotion=()=>window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 /* ---------- Theme (only the choice is stored, under its own key) ---------- */
@@ -225,8 +226,8 @@ function viewHome(){
   // today's meals
   const L=S.log[td]||{};
   const mealRow=sl=>{const x=L[sl]||{};const def=sl==="dinner"?dinnerFor(td):defSlot(sl);const id=x.meal&&rs[x.meal]?x.meal:def;const m=rs[id];
-    if(!m)return `<li class="tmeal" data-slot="${sl}"><span class="bub">${ic(SLOT_IC[sl])}</span><span><span class="t">${sl[0].toUpperCase()+sl.slice(1)}</span><span class="meta">No meal chosen yet</span></span><span></span></li>`;
-    return `<li class="tmeal${x.eaten?" is-eaten":""}" data-slot="${sl}"><span class="bub">${ic(SLOT_IC[sl])}</span>
+    if(!m)return `<li class="tmeal" data-slot="${sl}"><span class="bub">${slotIc(sl)}</span><span><span class="t">${sl[0].toUpperCase()+sl.slice(1)}</span><span class="meta">No meal chosen yet</span></span><span></span></li>`;
+    return `<li class="tmeal${x.eaten?" is-eaten":""}" data-slot="${sl}"><span class="bub">${slotIc(sl)}</span>
       <span><span class="eyebrow">${sl}</span><span class="t">${esc(m.name)}</span><span class="meta">${Math.round(num(m.kcal)||0)} kcal · ${r1(num(m.p)||0)} g protein</span></span>
       <button type="button" class="chip" data-act="eat" data-day="${td}" data-slot="${sl}" data-meal="${esc(id)}" aria-pressed="${!!x.eaten}" aria-label="${sl} eaten today: ${esc(m.name)}">${x.eaten?"Eaten":"Eat"}</button></li>`};
   const target=pd.kcal||0,frac=target?eaten.kcal/target:0;
@@ -282,10 +283,10 @@ function tripOptions(sel){
   while(diffDays(t,cur)>=0){list.push(t);t=addDays(t,14)}
   Object.keys(S.items).forEach(k=>{if(!list.includes(k))list.push(k)});
   list.sort().reverse();
-  return list.map(t=>`<option value="${t}" ${t===sel?"selected":""}>${fmtDate(t,{day:"numeric",month:"short",year:"numeric"})}${t===cur?" (current)":""}</option>`).join("");
+  return list.map(t=>`<option value="${esc(t)}" ${t===sel?"selected":""}>${fmtDate(t,{day:"numeric",month:"short",year:"numeric"})}${t===cur?" (current)":""}</option>`).join("");
 }
 function itemRow(i,extra){
-  const [id,,name,buy,price,src]=i;const r=(S.items[S.trip]||{})[id]||{};const st=r.status||"";
+  const [id,,name,buy,price,src]=i;const r=(S.items[S.trip]||{})[id]||{};const st=r.status==="have"||r.status==="bought"?r.status:"";
   const right=st==="bought"&&r.paid!=null?`${eur(r.paid)}<small>you paid</small>`:st==="have"?`${eur(price)}<small>at home</small>`:`${eur(price)}<small>${src==="est"?"est.":"store price"}</small>`;
   const diff=st==="bought"&&r.paid!=null?(price-r.paid>=0?`<span class="diff save">${eur(price-r.paid)} under my price</span>`:`<span class="diff more">${eur(r.paid-price)} over my price</span>`):"";
   const tag=src==="offer"?'<span class="tag offer">Offer to 18 Nov</span>':"";
@@ -293,12 +294,12 @@ function itemRow(i,extra){
     <span><span class="name">${esc(name)}</span><span class="meta">${extra}</span>${tag}</span>
     <span class="price">${right}</span>
     <span class="acts">
-      <button type="button" class="chip have" data-act="status" data-id="${id}" data-st="have" aria-pressed="${st==="have"}">I have it</button>
-      <button type="button" class="chip" data-act="status" data-id="${id}" data-st="bought" aria-pressed="${st==="bought"}">Bought</button>
+      <button type="button" class="chip have" data-act="status" data-id="${esc(id)}" data-st="have" aria-pressed="${st==="have"}">I have it</button>
+      <button type="button" class="chip" data-act="status" data-id="${esc(id)}" data-st="bought" aria-pressed="${st==="bought"}">Bought</button>
     </span>
     ${st==="bought"?`<span class="pricefields">
-      <input type="text" inputmode="decimal" id="paid-${id}" data-act="paid" data-id="${id}" placeholder="Paid €" aria-label="What you paid for ${esc(name)}" value="${r.paid==null?"":r.paid.toFixed(2).replace(".",",")}">
-      <input type="text" id="store-${id}" data-act="store" data-id="${id}" placeholder="Store" aria-label="Where you bought ${esc(name)}" value="${esc(r.store)}">
+      <input type="text" inputmode="decimal" id="paid-${esc(id)}" data-act="paid" data-id="${esc(id)}" placeholder="Paid €" aria-label="What you paid for ${esc(name)}" value="${r.paid==null||isNaN(Number(r.paid))?"":Number(r.paid).toFixed(2).replace(".",",")}">
+      <input type="text" id="store-${esc(id)}" data-act="store" data-id="${esc(id)}" placeholder="Store" aria-label="Where you bought ${esc(name)}" value="${esc(r.store)}">
       ${diff}</span>`:""}
   </li>`;
 }
@@ -342,7 +343,7 @@ function viewShop(){
     for(const [d,its] of groups){
       if(!its.length)continue;const recs=S.items[S.trip]||{};
       html+=`<section class="group"><div class="ghead"><h3>${esc((R()[d]||{}).name||d)}</h3><span class="gtot">${its.filter(i=>(recs[i[0]]||{}).status).length}/${its.length} sorted</span></div><ul>`;
-      its.forEach(i=>{html+=rowFor(i,`${i[6][d]?"Need "+esc(i[6][d])+" · ":""}buy ${esc(i[3])}${i[1]==="PANTRY"?"":" at "+(STORES[i[1]]?STORES[i[1]].name.replace(/^Stop \d · /,""):i[1])}`)});
+      its.forEach(i=>{html+=rowFor(i,`${i[6][d]?"Need "+esc(i[6][d])+" · ":""}buy ${esc(i[3])}${i[1]==="PANTRY"?"":" at "+(STORES[i[1]]?STORES[i[1]].name.replace(/^Stop \d · /,""):esc(i[1]))}`)});
       html+=`</ul></section>`;
     }
   }
@@ -376,7 +377,7 @@ function viewMeals(){
       return `<div class="slot"><span class="lbl">${label}</span>${sel}<button type="button" class="chip" data-act="eat" data-day="${d}" data-slot="${sl}" data-meal="${esc(meal||"")}" aria-pressed="${!!x.eaten}" aria-label="${label} eaten on ${fmtDate(d)}">${x.eaten?"Eaten":"Eat"}</button></div>`};
     html+=`<article class="day${d===td?" today":""}"><div class="row between"><b>${fmtDate(d)}${d===td?" · today":""}</b><span class="muted small">${e.any?`${Math.round(e.kcal)} kcal · ${Math.round(e.p)} g protein`:"Nothing logged"}</span></div>
       ${slot("breakfast","Breakfast",defSlot("breakfast"))}${slot("lunch","Lunch",defSlot("lunch"))}${slot("dinner","Dinner",dinnerFor(d))}
-      <div class="slot"><span class="lbl">Extras</span><input type="number" min="0" step="10" data-act="logextra" data-day="${d}" id="ex-${d}" aria-label="Extra calories on ${fmtDate(d)}" placeholder="kcal" value="${L.extra&&L.extra.kcal?L.extra.kcal:""}"><span></span></div></article>`;
+      <div class="slot"><span class="lbl">Extras</span><input type="number" min="0" step="10" data-act="logextra" data-day="${d}" id="ex-${d}" aria-label="Extra calories on ${fmtDate(d)}" placeholder="kcal" value="${L.extra&&L.extra.kcal?esc(L.extra.kcal):""}"><span></span></div></article>`;
   }
   html+=`<section><h3>Per-serving nutrition</h3></section>`;
   Object.values(rs).forEach(m=>{
@@ -399,7 +400,7 @@ function viewCooking(){
   ["breakfast","lunch","dinner","snack"].forEach(sl=>{
     const list=Object.values(rs).filter(r=>r.slot===sl);if(!list.length)return;
     html+=`<section class="group"><div class="ghead"><h3>${sl[0].toUpperCase()+sl.slice(1)}</h3><span class="gtot">${list.length} guide${list.length===1?"":"s"}</span></div>`;
-    list.forEach(r=>{html+=`<button type="button" class="card rcard" data-act="open" data-id="${esc(r.id)}" data-slot="${esc(r.slot)}"><span class="tile">${ic(SLOT_IC[r.slot]||"bowl")}</span><span style="min-width:0"><span class="rt">${esc(r.name)}</span><span class="meta">${ic("clock")} ${esc(r.time||"No time set")} · makes ${esc(r.serves)} × ${esc(r.servingLabel||"serving")}</span>${macroShare(r)}${r.edited?'<span class="tag">Edited</span>':""}${!r.builtin?'<span class="tag">Your meal</span>':""}</span><span class="kc">${Math.round(num(r.kcal)||0)}<small>kcal each</small><em>${r1(num(r.p)||0)} g protein</em></span></button>`});
+    list.forEach(r=>{html+=`<button type="button" class="card rcard" data-act="open" data-id="${esc(r.id)}" data-slot="${esc(r.slot)}"><span class="tile">${slotIc(r.slot)}</span><span style="min-width:0"><span class="rt">${esc(r.name)}</span><span class="meta">${ic("clock")} ${esc(r.time||"No time set")} · makes ${esc(r.serves)} × ${esc(r.servingLabel||"serving")}</span>${macroShare(r)}${r.edited?'<span class="tag">Edited</span>':""}${!r.builtin?'<span class="tag">Your meal</span>':""}</span><span class="kc">${Math.round(num(r.kcal)||0)}<small>kcal each</small><em>${r1(num(r.p)||0)} g protein</em></span></button>`});
     html+=`</section>`;
   });
   html+=`<section class="row"><button class="btn" type="button" data-act="newrecipe">Add a meal</button>${Object.keys(S.settings.recipes||{}).some(k=>DEF[k]&&S.settings.recipes[k].deleted)?`<button class="btn ghost" type="button" data-act="restore">Restore deleted meals</button>`:""}</section>`;
@@ -408,7 +409,7 @@ function viewCooking(){
 function viewRecipe(r){
   const f=S.scale||1,ck=getCk(r.id);
   let html=`<section class="row between"><button class="btn ghost" type="button" data-act="back">← All meals</button><button class="btn ghost" type="button" data-act="wake" aria-pressed="${!!S.wake}">${S.wake?"Screen stays on":"Keep screen on"}</button></section>
-  <section><h2>${esc(r.name)}</h2><p class="muted small">Makes ${scaleAmt(String(r.serves),f)} × ${esc(r.servingLabel||"serving")} · ${esc(r.time||"")} · ${Math.round(num(r.kcal)||0)} kcal and ${r1(num(r.p)||0)} g protein each</p></section>
+  <section><h2>${esc(r.name)}</h2><p class="muted small">Makes ${esc(scaleAmt(String(r.serves),f))} × ${esc(r.servingLabel||"serving")} · ${esc(r.time||"")} · ${Math.round(num(r.kcal)||0)} kcal and ${r1(num(r.p)||0)} g protein each</p></section>
   <div class="seg" role="group" aria-label="Batch size">${SCALES.map(x=>`<button type="button" data-act="scale" data-f="${x}" aria-pressed="${f===x}">${x===0.5?"½":x===1.5?"1½":x}×</button>`).join("")}</div>`;
   if((r.oven||[]).length)html+=`<section class="card"><h3>Oven & hob</h3><div class="ovgrid">${r.oven.map(o=>`<div class="ov"><span>${esc(o[0])}</span><b>${esc(o[1])}</b></div>`).join("")}</div></section>`;
   html+=`<section class="card"><div class="row between"><h3>Ingredients${f!==1?` · ${f}× batch`:""}</h3><span class="muted small">Tick as you weigh</span></div><ul>${(r.ingredients||[]).map((g,i)=>`<li><label class="ing${ck["i"+i]?" done":""}" for="ig-${i}"><input type="checkbox" id="ig-${i}" data-act="ck" data-k="i${i}" ${ck["i"+i]?"checked":""}><span><span class="amt">${esc(scaleAmt(g[0],f))}</span>${esc(g[1])}</span></label></li>`).join("")}</ul></section>`;
@@ -491,7 +492,7 @@ function viewProgress(){
     <label class="f" for="wkg">Weight, kg<input type="number" id="wkg" step="0.1" min="30" max="300" required></label>
     <button class="btn" type="submit" style="align-self:flex-end">Save</button></form>
     <div class="chartbox" id="chartbox"><svg class="chart" id="chart" viewBox="0 0 640 260" role="img" aria-label="Weight chart"></svg><div class="tip" id="tip" hidden></div></div>
-    ${ws.length?`<div class="tablewrap"><table><thead><tr><th>Date</th><th class="n">kg</th><th></th></tr></thead><tbody>${ws.slice().reverse().map(d=>`<tr><td>${fmtDate(d)}</td><td class="n">${S.weights[d].toFixed(1)}</td><td class="n"><button class="chip" type="button" data-act="delw" data-day="${d}" aria-label="Delete weigh-in on ${fmtDate(d)}">Delete</button></td></tr>`).join("")}</tbody></table></div>`:`<div class="empty"><span class="art">${ic("scale")}</span><b>No weigh-ins yet</b><span class="small">Weigh yourself at the same time each week, ideally in the morning, and your trend appears above.</span></div>`}
+    ${ws.length?`<div class="tablewrap"><table><thead><tr><th>Date</th><th class="n">kg</th><th></th></tr></thead><tbody>${ws.slice().reverse().map(d=>`<tr><td>${fmtDate(d)}</td><td class="n">${(Number(S.weights[d])||0).toFixed(1)}</td><td class="n"><button class="chip" type="button" data-act="delw" data-day="${esc(d)}" aria-label="Delete weigh-in on ${fmtDate(d)}">Delete</button></td></tr>`).join("")}</tbody></table></div>`:`<div class="empty"><span class="art">${ic("scale")}</span><b>No weigh-ins yet</b><span class="small">Weigh yourself at the same time each week, ideally in the morning, and your trend appears above.</span></div>`}
   </section>`;
   return html;
 }

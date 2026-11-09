@@ -1,0 +1,9 @@
+{
+  "name": "prepwise",
+  "private": true,
+  "description": "Prepwise meal prep and grocery app (static site, no build step)",
+  "scripts": {
+    "test": "node --test \"tests/*.test.js\"",
+    "start": "npx serve ."
+  }
+}

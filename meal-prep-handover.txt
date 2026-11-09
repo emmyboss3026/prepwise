@@ -1,0 +1,640 @@
+COMPLETE MEAL-PREP PROJECT HANDOVER — FOR CLAUDE
+
+You are taking over an ongoing meal-preparation project previously managed with ChatGPT. I need you to understand the entire project, preserve all the measurements and decisions already made, and help me continue without having to explain everything again.
+
+IMPORTANT: The recipes below are the agreed recipes. Do not change their ingredient proportions without explaining why. Distinguish raw ingredient weights from cooked weights, and do not invent measurements that I have not provided.
+
+1. PROJECT OVERVIEW
+
+I am preparing high-protein, calorie-conscious meals in Linz, Austria, using ingredients from supermarkets such as HOFER, Lidl, BILLA, INTERSPAR and dm.
+
+My completed meal-prep plan covers 8 days, with three meals per day:
+
+* Breakfast: 1 homemade beef, egg and potato burrito.
+* Lunch: 6 homemade protein pancakes.
+* Dinner: 1 high-protein chicken meal-prep bowl.
+
+Total food prepared
+
+* 8 breakfast burritos
+* 48 protein pancakes
+* 2 Creamy Cajun Chicken & Potato bowls
+* 2 Chicken Alfredo Pasta bowls
+* 2 Middle Eastern Garlic-Herb Chicken & Rice bowls
+* 2 Mexican Street-Corn Chicken & Rice bowls
+
+Total: 8 burritos + 48 pancakes + 8 dinner bowls.
+
+I have already completed the cooking process for these meals. Your job is to preserve the recipes, calculate nutritional information accurately, help with portioning and storage, and assist with future meal-prep batches.
+
+2. RECIPE ONE — LOW-CALORIE PROTEIN PANCAKES
+
+Yield: 48 small-to-medium pancakes
+
+I eat 6 pancakes per day for 8 days.
+
+Full ingredients
+
+Ingredient	Amount
+Liquid egg whites (Eiklar)	1,200 g
+Low-fat Skyr or Magertopfen	720 g
+Oats or oat flour	144 g
+Baking powder	24 g
+Zero-calorie sweetener	To taste
+Vanilla extract/aroma	Approximately 10–12 ml
+Cinnamon	Approximately 4–5 g, optional
+Salt	Approximately 1–2 g
+Water	Add gradually until correct consistency
+Cooking spray	Minimal amount if necessary
+
+Optional modification: One banana weighing approximately 100–120 g without the peel may be added to the entire batter. Do not assume I actually added it unless I confirm.
+
+Preparation
+
+1. Blend the oats into fine oat flour.
+2. Add egg whites, Skyr/Magertopfen, sweetener, vanilla, cinnamon and salt.
+3. Blend until smooth.
+4. Add baking powder and mix briefly.
+5. Add water gradually, adjusting for batter consistency.
+6. Allow batter to rest approximately 5–10 minutes.
+7. Weigh the entire finished batter.
+8. Divide total batter weight by 48 to determine the exact uncooked batter weight per pancake.
+9. Cook in a non-stick pan over medium-low heat until cooked through.
+
+If the blender is too small, divide the recipe into two identical batches of 24 pancakes.
+
+Portioning
+
+* 48 pancakes total
+* 6 pancakes per serving
+* 8 daily servings
+
+Formula: Total finished batter weight ÷ 48 = raw batter weight per pancake.
+
+Estimated original nutrition was approximately 33–35 kcal per pancake, but this was not verified using actual product labels.
+
+Calculate accurate calories and protein using the brands and nutritional labels I provide.
+
+3. RECIPE TWO — CREAMY CAJUN CHICKEN & POTATOES
+
+Yield: 2 dinner portions
+
+Ingredients
+
+Ingredient	Amount
+Raw chicken breast	400 g
+Raw potatoes	480 g
+Broccoli, green beans or mixed vegetables	300 g
+Light evaporated milk	100 ml
+Light garlic/herb cream cheese	60 g
+Tomato paste	13–15 g
+Onion	Approximately half a small onion
+Butter	5 g
+Olive oil	5 g
+Cajun seasoning	To taste
+Paprika	To taste
+Garlic powder	To taste
+Onion powder	To taste
+Italian herbs	To taste
+Salt and pepper	To taste
+
+Potatoes
+
+1. Cut 480 g raw potatoes into 2–3 cm cubes.
+2. Toss with 5 g olive oil and seasonings.
+3. Preheat oven to 190°C.
+4. Select the plain three-blade fan symbol (fan/convection).
+5. Roast on the middle rack for approximately 25–30 minutes.
+6. Turn potatoes halfway through cooking.
+
+Chicken and sauce
+
+1. Season 400 g chicken breast.
+2. Cook thoroughly to 74°C internal temperature.
+3. Remove chicken from the pan.
+4. Melt 5 g butter.
+5. Soften the chopped onion.
+6. Add 13–15 g tomato paste.
+7. Add 100 ml evaporated milk and 60 g cream cheese.
+8. Stir over low-medium heat until creamy.
+9. Return chicken to sauce.
+
+Cook 300 g vegetables separately.
+
+Portioning
+
+Divide each cooked component equally into two containers.
+
+Each meal represents:
+
+* 200 g raw chicken allocation
+* 240 g raw potatoes
+* 150 g vegetables
+* 50 ml evaporated milk
+* 30 g cream cheese
+* Half of all other batch ingredients
+
+Do not confuse raw allocation with cooked serving weight.
+
+4. RECIPE THREE — HIGH-PROTEIN CHICKEN ALFREDO PASTA
+
+Yield: 2 dinner portions
+
+Ingredients
+
+Ingredient	Amount
+Raw chicken breast	400 g
+Dry pasta/spaghetti	115 g
+Tomato sauce/passata	75 g
+Light evaporated milk	150 ml
+Light cream cheese	65 g
+Parmesan	15 g
+Onion	Half a small onion
+Garlic	2 cloves
+Light butter	Approximately 5 g
+Vegetables	300 g
+Italian herbs	To taste
+Garlic powder	To taste
+Paprika	To taste
+Chilli flakes	Optional
+Parsley	Optional
+Salt and pepper	To taste
+
+Cooking
+
+1. Weigh exactly 115 g dry pasta.
+2. Cook in boiling salted water according to package instructions until al dente.
+3. Reserve a little pasta water before draining.
+4. Season and cook 400 g chicken breast until 74°C internally.
+5. Remove chicken from the pan.
+6. Add approximately 5 g butter.
+7. Cook chopped onion and garlic until softened.
+8. Add 75 g tomato sauce.
+9. Add 150 ml evaporated milk.
+10. Add 65 g cream cheese and 15 g Parmesan.
+11. Stir until creamy.
+12. Season appropriately.
+13. Combine the entire cooked pasta batch with the sauce.
+14. Cook 300 g vegetables separately.
+
+Portioning
+
+Divide the finished pasta-and-sauce mixture by two.
+
+Divide cooked chicken by two.
+
+Divide cooked vegetables by two.
+
+Each meal represents:
+
+* 200 g raw chicken
+* 57.5 g dry pasta
+* 150 g vegetables
+* 37.5 g tomato sauce
+* 75 ml evaporated milk
+* 32.5 g cream cheese
+* 7.5 g Parmesan
+* Half the remaining ingredients
+
+The original recipe estimated approximately 260 g cooked pasta from 115 g dry pasta, but actual cooked weight must be measured rather than assumed.
+
+5. RECIPE FOUR — MIDDLE EASTERN GARLIC-HERB CHICKEN & RICE
+
+Yield: 2 dinner portions
+
+Chicken ingredients
+
+Ingredient	Amount
+Raw chicken breast	400 g
+Paprika	3 g
+Garlic powder	2 g
+Onion powder	2 g
+Cumin	1.5 g
+Oregano	1.5 g
+Dried parsley	1 g
+Salt	2–2.5 g
+Tomato paste	7.5 g
+Honey	5–7.5 g
+Olive oil	5–7.5 g
+Lemon juice	Approximately half a lemon
+Black pepper/chilli	Optional
+
+Chicken oven settings
+
+* Oven mode: fan/convection, plain three-blade fan symbol
+* Temperature: 190°C
+* Rack: middle
+* Time: approximately 18–22 minutes
+* Safe internal temperature: 74°C
+
+Optional finishing:
+
+* Top grill/zig-zag symbol
+* Approximately 200°C
+* 2–4 minutes while watching closely
+
+Rice ingredients
+
+Ingredient	Amount
+Dry basmati rice	135 g
+Butter	5 g
+Chopped onion	50–60 g
+Turmeric	Approximately ½ tsp
+Paprika	Approximately ½ tsp
+Cumin	Approximately ¼–½ tsp
+Italian herbs	Approximately ½ tsp
+Salt	To taste
+
+Rice cooking method:
+
+1. Rinse 135 g dry basmati rice.
+2. Use approximately 200–220 ml water, subject to package directions.
+3. Bring to a boil.
+4. Cover and simmer on low heat for approximately 10–12 minutes.
+5. Turn off heat and rest covered for 10 minutes.
+6. Fluff and combine with cooked onion, butter and seasonings.
+
+Fresh salad
+
+* Tomatoes: 200 g
+* Spring onions: 40–50 g
+* Fresh parsley: 40–50 g
+* Olive oil: 5 g
+* Lemon juice: half a lemon
+* Sumac, salt and chilli flakes: to taste
+
+Creamy sauce
+
+* Greek/plain yogurt: 80 g
+* Light mayonnaise: 35–40 g
+* Chilli-garlic sauce: 30–35 g
+* Evaporated milk: 25–35 ml
+* Paprika and onion powder: to taste
+
+Portioning
+
+Weigh and divide each finished component by two:
+
+* Chicken
+* Seasoned rice
+* Fresh salad
+* Creamy sauce
+
+Each dinner represents 200 g raw chicken and 67.5 g dry rice, plus half of all salad, sauce and seasoning ingredients.
+
+Keep fresh salad and sauce separate from hot food when practical.
+
+6. RECIPE FIVE — MEXICAN STREET-CORN CHICKEN & RICE
+
+Yield: 2 dinner portions
+
+Ingredients
+
+Ingredient	Amount
+Raw chicken breast	416 g
+Dry basmati rice	160 g
+Drained sweetcorn	180 g
+Red bell pepper	60–80 g
+Red onion	40 g
+Fresh coriander/cilantro	10–12 g
+Greek/plain yogurt	72 g
+Light mayonnaise	32 g
+Lime	Approximately 1
+Olive oil	6–8 g total
+
+Chicken seasoning
+
+* Paprika: 3.2 g
+* Cumin: 2 g
+* Garlic powder: 2 g
+* Onion powder: 1.6 g
+* Chilli powder: approximately 1 g
+* Salt: 2 g
+* Black pepper: to taste
+* Olive oil: approximately 4 g
+* Lime juice: approximately half a lime
+
+Chicken oven settings
+
+* Fan/convection
+* 190°C
+* Middle rack
+* Approximately 18–24 minutes
+* Internal temperature 74°C
+
+Optional grill finish for 2–4 minutes.
+
+Rice
+
+1. Weigh 160 g rice DRY.
+2. Rinse thoroughly.
+3. Cook with approximately 240–260 ml water, subject to rice package directions.
+4. Simmer covered until cooked and allow to rest.
+
+Corn mixture
+
+Combine:
+
+* 180 g drained corn
+* 60–80 g diced red pepper
+* 40 g diced red onion
+* Remaining 2–4 g olive oil if required
+* Paprika, cumin, garlic powder, chilli, salt and pepper
+
+Roast at:
+
+* 180°C fan/convection
+* Middle rack
+* 15–18 minutes
+* Stir halfway
+
+Add fresh coriander after roasting.
+
+Sauce
+
+Combine:
+
+* 72 g Greek/plain yogurt
+* 32 g light mayonnaise
+* Juice from approximately half a lime
+* Paprika
+* Garlic powder
+* Onion powder
+* Chilli
+* Salt
+
+Portioning
+
+Weigh and divide into two:
+
+* Cooked chicken
+* Cooked rice
+* Roasted corn mixture
+* Finished yogurt sauce
+
+Each dinner represents:
+
+* 208 g raw chicken
+* 80 g dry rice
+* 90 g drained corn
+* 30–40 g red pepper
+* 20 g red onion
+* 36 g yogurt
+* 16 g light mayo
+* Half of remaining ingredients
+
+7. RECIPE SIX — HIGH-PROTEIN BEEF, EGG & POTATO BREAKFAST BURRITOS
+
+Yield: 8 large burritos
+
+This is the final meal-prep batch. It was scaled from a previous recipe that made 20 burritos.
+
+Ingredients
+
+Ingredient	Full batch	Per burrito
+Large tortillas	8	1
+Raw ground beef, 100% beef	960 g	120 g
+Raw potatoes	600 g	75 g
+Whole eggs	8	1
+Cottage cheese	80 g	10 g
+Tomato paste	64 g	8 g
+Worcestershire sauce	80 ml	10 ml
+Sriracha mayonnaise	160 g	20 g
+Onion	120 g	15 g
+Garlic	3–4 cloves	Proportional
+Chives	8–12 g	1–1.5 g
+Oil for potatoes	Approximately 6 g	0.75 g
+
+Seasonings:
+
+* Smoked paprika
+* Garlic powder
+* Onion powder
+* Chilli powder
+* Italian herbs
+* Salt
+* Black pepper
+
+Potato preparation
+
+1. Weigh 600 g raw potatoes.
+2. Cut into 1.5–2 cm cubes.
+3. Coat with approximately 6 g oil.
+4. Add seasonings.
+5. Preheat oven to 200°C fan/convection.
+6. Roast on the middle rack for approximately 25–30 minutes.
+7. Turn halfway.
+
+Beef preparation
+
+1. Weigh 960 g raw beef mince.
+2. Brown in two batches if necessary.
+3. Add 120 g chopped onion.
+4. Add 3–4 minced garlic cloves.
+5. Add 64 g tomato paste.
+6. Add 80 ml Worcestershire sauce.
+7. Add seasonings.
+8. Cook thoroughly until the mixture is fairly dry.
+
+The selected beef was originally SONNHOF 100% ground beef sold in Austria, but actual fat content must be confirmed from the product label.
+
+Eggs
+
+1. Whisk 8 whole eggs with 80 g cottage cheese.
+2. Season lightly.
+3. Cook over medium-low heat until just set.
+
+Assembly
+
+Weigh the complete cooked beef mixture and divide by 8.
+
+Weigh all roasted potatoes and divide by 8.
+
+Weigh the cooked egg mixture and divide by 8.
+
+For each tortilla, add:
+
+1. One-eighth of cooked potatoes
+2. One-eighth of cooked beef mixture
+3. One-eighth of cooked egg mixture
+4. Exactly 20 g Sriracha mayo
+5. Approximately 1–1.5 g chives
+
+Fold tightly into a burrito.
+
+Optionally toast seam-side down in a dry pan.
+
+Cool promptly and refrigerate or freeze.
+
+Important: 120 g beef and 75 g potatoes per burrito refer to RAW ingredient allocations, not cooked filling weights.
+
+8. TOTAL INGREDIENT QUANTITIES ACROSS THE ENTIRE PROJECT
+
+Key combined requirements:
+
+Ingredient	Total used/planned
+Chicken breast	1,616 g raw
+Ground beef	960 g raw
+Potatoes	1,080 g raw
+Dry basmati rice	295 g
+Dry pasta	115 g
+Liquid egg whites	1,200 g
+Skyr/Magertopfen for pancakes	720 g
+Oats	144 g
+Baking powder	24 g
+Whole eggs	8
+Large tortillas	8
+Cottage cheese	80 g
+Light cream cheese	125 g
+Evaporated milk	Approximately 275–285 ml
+Parmesan	15 g
+Greek/plain yogurt for dinner sauces	152 g
+Light mayo for dinner sauces	Approximately 67–72 g
+Sriracha mayo for burritos	160 g
+Worcestershire sauce	80 ml
+Drained sweetcorn	180 g
+Tomato paste	Approximately 85–87 g
+Tomato sauce/passata	75 g
+Vegetables for Cajun and Alfredo	600 g
+Tomatoes for Middle Eastern salad	200 g
+Red bell pepper	60–80 g
+Red onion	40 g
+Spring onion	40–50 g
+Fresh parsley for salad	40–50 g
+Fresh coriander	10–12 g
+
+Other ingredients include onions, garlic, lemons, lime, butter, olive oil, yogurt sauces, honey, chives, herbs, spices, vanilla, cinnamon and sweetener.
+
+Quantities above are recipe requirements, not necessarily the amount purchased or actually consumed.
+
+9. MEAL SCHEDULE
+
+Day	Breakfast	Lunch	Dinner
+1	1 burrito	6 pancakes	Cajun chicken & potatoes
+2	1 burrito	6 pancakes	Cajun chicken & potatoes
+3	1 burrito	6 pancakes	Chicken Alfredo pasta
+4	1 burrito	6 pancakes	Chicken Alfredo pasta
+5	1 burrito	6 pancakes	Middle Eastern chicken & rice
+6	1 burrito	6 pancakes	Middle Eastern chicken & rice
+7	1 burrito	6 pancakes	Mexican street-corn chicken & rice
+8	1 burrito	6 pancakes	Mexican street-corn chicken & rice
+
+The dinner order can be rearranged according to freezing and thawing needs.
+
+10. FOOD STORAGE
+
+These are cooked meals intended to last eight days, so they must not all remain refrigerated for the entire period.
+
+* Refrigerate only the portions intended for the next 3–4 days, following appropriate food-safety guidance.
+* Freeze the remaining meals promptly after cooling.
+* Cool cooked rice rapidly and refrigerate or freeze promptly.
+* Store pancakes in six-pancake packs.
+* Freeze burritos individually.
+* Keep fresh salad and creamy sauces separate when practical; fresh salad is not ideal for freezing.
+* Thaw frozen meals in the refrigerator.
+* Reheat cooked food thoroughly.
+
+If these foods were already prepared some time ago, ask me for the cooking date and how they have been stored before advising whether they are still safe to eat.
+
+11. SHOPPING AND PRICES
+
+Primary shopping location: Linz, Austria.
+
+Preferred retailers:
+
+* HOFER
+* Lidl
+* BILLA
+* BILLA PLUS
+* INTERSPAR
+* dm
+
+Previously discussed estimated full shopping budget: approximately €75–90 if buying most ingredients from scratch, but this was a preliminary estimate, not a verified receipt total.
+
+When discussing prices:
+
+1. Research current Austrian supermarket prices where possible.
+2. Show package size, unit price and quantity required.
+3. Distinguish the amount consumed from the full package purchased.
+4. Include leftovers from purchased packages.
+5. Avoid presenting expired offers as currently available.
+6. Compare retailers when a meaningful saving is possible.
+
+12. NUTRITIONAL ANALYSIS — IMPORTANT
+
+I want accurate nutrition for all my prepared meals.
+
+Calculate:
+
+* Calories
+* Protein
+* Carbohydrates
+* Fat
+* Fibre
+* Calories per individual serving
+* Daily totals for breakfast + six pancakes + dinner
+* Full eight-day nutritional totals
+
+However, you must distinguish verified nutritional values from estimates.
+
+Do not assume the nutritional values quoted by the original recipe creators apply to my modified recipes.
+
+For example, the fat percentage of my beef, the exact tortilla brand, the evaporated milk and cream cheese labels, and the amount of cooking oil will change the nutritional values.
+
+Ask for ingredient labels and actual quantities where necessary.
+
+When estimating, show the assumptions.
+
+I am interested in weight management and high-protein meals, but do not assume that a very low calorie total is automatically an appropriate daily intake.
+
+13. HOW I WANT YOU TO WORK WITH ME
+
+Please act as my ongoing meal-prep assistant.
+
+Follow these rules:
+
+1. Always give exact ingredient quantities in grams or millilitres whenever available.
+2. Clearly distinguish raw weights from cooked weights.
+3. Preserve the original recipes unless I explicitly ask for changes.
+4. For cooked portioning, use the actual cooked batch weight divided by the number of servings.
+5. Never invent the final cooked weights.
+6. Explain oven symbols, temperature, rack position and cooking duration clearly.
+7. Prioritize accurate food safety and storage.
+8. Calculate calories and macros using real product labels where possible.
+9. Help me reduce ingredient costs using Austrian supermarkets.
+10. Keep track of recipe modifications and actual measurements as I provide them.
+11. When I tell you a batch is completed, help me calculate its final portion weights.
+12. Avoid asking me to repeat information already included in this handover.
+
+14. CURRENT PROJECT STATUS
+
+All five meal-prep categories have already been cooked:
+
+* Protein pancakes — completed
+* Creamy Cajun chicken and potatoes — completed
+* Chicken Alfredo pasta — completed
+* Middle Eastern garlic-herb chicken and rice — completed
+* Mexican street-corn chicken and rice — completed
+* Beef, egg and potato breakfast burritos — final batch previously guided; confirm whether assembly was completed
+
+Actual final cooked weights, exact brands, packaging labels, substitutions and final container weights have not yet been documented in this handover.
+
+Do not treat example cooked weights from previous explanations as real measurements.
+
+YOUR FIRST TASK
+
+Acknowledge that you understand this entire meal-prep project.
+
+Then produce a consolidated master reference table covering all five meal-prep categories, including the four dinner recipes, with:
+
+* Number of portions
+* Main protein and raw weight
+* Main carbohydrate and dry/raw weight
+* Other major ingredients
+* Cooking method
+* Exact portioning formula
+* Estimated nutrition only where sufficiently supported
+
+After that, ask me which aspect I want to continue working on: accurate nutritional calculations, final cooked portion weights, storage, future meal-prep planning or supermarket cost optimization.
+
+This is a continuation of an existing project, not a request to design completely new recipes.

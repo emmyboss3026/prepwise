@@ -299,7 +299,7 @@ const GROCERY_ART=[
 function groceryThumb(i){
   const c=(S.settings.customItems||[]).find(x=>x.id===i[0]);
   const url=c&&typeof c.imageUrl==="string"&&/^https:\/\/[^\\s<>"']+$/i.test(c.imageUrl)?c.imageUrl:"";
-  if(url)return `<span class="grocery-thumb"><img src="${esc(url)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.hidden=true;this.nextElementSibling.hidden=false"><span class="grocery-thumb-fallback" hidden aria-hidden="true">🛒</span></span>`;
+  if(url)return `<span class="grocery-thumb"><img src="${esc(url)}" alt="" loading="lazy" referrerpolicy="no-referrer" ><span class="grocery-thumb-fallback" aria-hidden="true">🛒</span></span>`;
   const match=GROCERY_ART.find(([pattern])=>pattern.test(i[2]));
   return `<span class="grocery-thumb" aria-hidden="true"><span class="grocery-thumb-fallback">${match?match[1]:"🛒"}</span></span>`;
 }

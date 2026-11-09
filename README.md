@@ -12,7 +12,8 @@ Plain static site, no build step:
 
 Run locally: `npx serve .` (or any static server), then open http://localhost:3000.
 Tests: `npm test` (Node 18+, no dependencies installed).
-Deploy: `vercel --prod` from this folder, or connect a GitHub repo to the Vercel project.
+Code: https://github.com/emmyboss3026/prepwise — pushing to `main` deploys to production once the Vercel project is connected to this repo (Vercel → prepwise → Settings → Git).
+Manual deploy: `vercel --prod` from this folder.
 
 ## Tabs
 Home (greeting, today's meals, next cook day, grocery progress, upcoming cooking tasks, progress summary, quick actions) ·

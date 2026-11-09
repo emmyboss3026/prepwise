@@ -115,7 +115,7 @@ try{matchMedia("(prefers-color-scheme: dark)").addEventListener("change",()=>{sy
 syncTheme();
 
 /* ---------- State & storage ---------- */
-const S={tab:"home",group:"store",shopFilter:"remaining",trip:tripOf(today()),logTrip:tripOf(today()),items:{},settings:{},log:{},weights:{},user:null,cloud:false,loading:false};
+const S={tab:"home",group:"store",shopFilter:"remaining",pinned:{},trip:tripOf(today()),logTrip:tripOf(today()),items:{},settings:{},log:{},weights:{},user:null,cloud:false,loading:false};
 let sb=null;
 try{if(window.supabase)sb=window.supabase.createClient(SB_URL,SB_KEY)}catch(e){sb=null}
 
@@ -196,7 +196,7 @@ function render(opt){
   if(S.tab==="progress")drawChart();
 }
 /* Switch section: render with a staggered entrance, reset scroll, move focus to the content for screen readers. */
-function go(tab,pre){S.tab=tab;if(pre)pre();render({enter:true});window.scrollTo(0,0);main.focus({preventScroll:true})}
+function go(tab,pre){if(tab!==S.tab)S.pinned={};S.tab=tab;if(pre)pre();render({enter:true});window.scrollTo(0,0);main.focus({preventScroll:true})}
 
 /* ---------- Home dashboard ---------- */
 const SLOT_RANK={breakfast:0,lunch:1,dinner:2,snack:3};
@@ -303,6 +303,13 @@ function itemRow(i,extra){
       ${diff}</span>`:""}
   </li>`;
 }
+function budgetCard(t){
+  const budget=PW.parseBudget((S.settings.tripBudgets||{})[S.trip]).value;
+  const b=PW.budgetStatus(t.spent,t.left,budget);
+  return `<section class="card" aria-label="Shopping budget"><div class="row between"><h3>Trip budget</h3><label class="f" for="trip-budget">Budget (€)<input type="text" id="trip-budget" inputmode="decimal" data-act="tripbudget" value="${budget==null?"":esc(String(budget).replace(".",","))}" placeholder="Set budget" style="max-width:130px"></label></div>
+    <p class="muted small">Estimated checkout: ${eur(b.total)} · ${eur(t.spent)} purchased · ${eur(t.left)} still to buy. Pantry items are not counted.</p>
+    ${budget==null?"":`<p class="small" aria-live="polite"><strong>${b.over?eur(-b.diff)+" over budget":eur(b.diff)+" under budget"}</strong> based on the estimated total. Enter actual prices for more accuracy.</p><div class="bar${b.over?" offer":""}" role="img" aria-label="Estimated spending ${eur(b.total)} of ${eur(budget)} budget"><i style="--v:${Math.min(100,budget?b.total/budget*100:100).toFixed(1)}"></i></div>`}</section>`;
+}
 function viewShop(){
   const t=tripTotals(S.trip);const cur=tripOf(today());const all=items();const ed=S.editList;
   let html=`<section class="row between"><div><h2>Grocery list</h2><p class="muted small">${ed?"Editing your list":"Everything you need for this two-week prep"}</p></div>
@@ -313,6 +320,7 @@ function viewShop(){
     <div class="stat spent"><b>${t.est?"~":""}${eur(t.spent)}</b><span>Spent</span></div>
     <div class="stat"><b>${eur(t.left)}</b><span>Still to buy</span></div>
   </section>
+  ${budgetCard(t)}
   <section class="card" aria-label="Shopping completion">
     ${(()=>{const recs=S.items[S.trip]||{};const needed=all.filter(i=>recs[i[0]]?.status!=="have");const bought=needed.filter(i=>recs[i[0]]?.status==="bought").length;const remaining=needed.length-bought;const pct=needed.length?Math.round(100*bought/needed.length):100;return `<div class="row between"><h3>Shopping progress</h3><strong>${pct}% complete</strong></div><progress value="${bought}" max="${needed.length||1}" style="width:100%;accent-color:var(--accent,#23865a)" aria-label="Groceries purchased"></progress><p class="muted small" aria-live="polite">${bought} bought · ${remaining} left to buy · ${all.length-needed.length} already at home</p>`})()}
   </section>
@@ -333,7 +341,7 @@ function viewShop(){
       ${(S.settings.hiddenItems||[]).length?`<p class="small muted">${S.settings.hiddenItems.length} of my default items are hidden. <button class="chip" type="button" data-act="unhide">Show them again</button></p>`:""}</section>`;
   }
   if(!ed)html+=`<div class="row between"><div class="seg" role="group" aria-label="Show groceries"><button type="button" data-act="shopfilter" data-filter="remaining" aria-pressed="${S.shopFilter==="remaining"}">Remaining</button><button type="button" data-act="shopfilter" data-filter="all" aria-pressed="${S.shopFilter==="all"}">All</button><button type="button" data-act="shopfilter" data-filter="bought" aria-pressed="${S.shopFilter==="bought"}">Bought</button></div></div>`;
-  const visible=ed?all:all.filter(i=>{const status=(S.items[S.trip]||{})[i[0]]?.status;return S.shopFilter==="all"||(S.shopFilter==="bought"?status==="bought":!status)});
+  const visible=ed?all:all.filter(i=>{const status=(S.items[S.trip]||{})[i[0]]?.status;return S.shopFilter==="all"||S.pinned[i[0]]||(S.shopFilter==="bought"?status==="bought":!status)}); // pinned: a row you just tapped stays put so you can enter its price
   if(!ed&&!visible.length)html+=`<section class="card"><p class="muted">No items in this view. Choose All to see your full list.</p></section>`;
   const rowFor=(i,extra)=>ed?`<li class="item"><span><span class="name">${esc(i[2])}</span><span class="meta">${esc(i[3])} · ${eur(i[4])}</span></span><span class="price"><button class="chip" type="button" data-act="rmitem" data-id="${esc(i[0])}" aria-label="Remove ${esc(i[2])}">Remove</button></span></li>`:itemRow(i,extra);
   if(S.group==="store"){
@@ -559,10 +567,10 @@ document.querySelector("nav.tabs").addEventListener("click",e=>{const b=e.target
 const main=$("#main");
 main.addEventListener("click",e=>{
   const b=e.target.closest("[data-act]");if(!b||b.tagName==="SELECT"||b.tagName==="INPUT")return;const a=b.dataset.act;
-  if(a==="status"){const id=b.dataset.id,st=b.dataset.st;const r=Object.assign({status:"",paid:null,store:""},(S.items[S.trip]||{})[id]);
+  if(a==="status"){const id=b.dataset.id,st=b.dataset.st;S.pinned[id]=1;const r=Object.assign({status:"",paid:null,store:""},(S.items[S.trip]||{})[id]);
     r.status=r.status===st?"":st;if(r.status!=="bought"){r.paid=null;r.store=""}putItem(S.trip,id,r);keepFocus(()=>render(),b.id||null,`[data-act=status][data-id="${id}"][data-st="${st}"]`)}
   else if(a==="group"){S.group=b.dataset.g;render()}
-  else if(a==="shopfilter"){S.shopFilter=["remaining","all","bought"].includes(b.dataset.filter)?b.dataset.filter:"remaining";render()}
+  else if(a==="shopfilter"){S.shopFilter=["remaining","all","bought"].includes(b.dataset.filter)?b.dataset.filter:"remaining";S.pinned={};render()}
   else if(a==="reset"){if(b.dataset.confirm){clearTrip(S.trip);toast("Trip cleared");render()}else{b.dataset.confirm="1";b.textContent="Tap again to clear every tick and price"}}
   else if(a==="eat"){const d=b.dataset.day,sl=b.dataset.slot;const x=Object.assign({},(S.log[d]||{})[sl]);x.eaten=!x.eaten;x.meal=b.dataset.meal;putLog(d,sl,x);keepFocus(()=>render(),null,`[data-act=eat][data-day="${d}"][data-slot="${sl}"]`)}
   else if(a==="delw"){putWeight(b.dataset.day,null);render()}
@@ -591,11 +599,13 @@ main.addEventListener("click",e=>{
 });
 main.addEventListener("change",e=>{
   const el=e.target,a=el.dataset.act;if(!a)return;
-  if(a==="trip"){S.trip=el.value;render()}
+  if(a==="trip"){S.trip=el.value;S.pinned={};render()}
   else if(a==="logtrip"){S.logTrip=el.value;render()}
   else if(a==="paid"||a==="store"){const id=el.dataset.id;const r=Object.assign({status:"bought",paid:null,store:""},(S.items[S.trip]||{})[id]);
     if(a==="paid"){const n=num(el.value);r.paid=el.value.trim()===""||n==null?null:Math.round(n*100)/100}else r.store=el.value.trim().slice(0,60);
     putItem(S.trip,id,r);setTimeout(()=>keepFocus(()=>render()),0)}
+  else if(a==="tripbudget"){const p=PW.parseBudget(el.value);if(!p.ok){toast("Enter a budget from €0 to €100,000");render();return}
+    const tb=Object.assign({},S.settings.tripBudgets);if(p.value==null)delete tb[S.trip];else tb[S.trip]=p.value;S.settings.tripBudgets=tb;putSettings();setTimeout(()=>keepFocus(()=>render()),0)}
   else if(a==="setting"){S.settings[el.dataset.k]=el.value;putSettings();setTimeout(()=>keepFocus(()=>render()),0)}
   else if(a==="logmeal"){const d=el.dataset.day,sl=el.dataset.slot||"dinner";const x=Object.assign({},(S.log[d]||{})[sl]);x.meal=el.value;putLog(d,sl,x);render()}
   else if(a==="plan"){S.settings.plan=Object.assign({},S.settings.plan,{[el.dataset.k]:el.value});putSettings();render()}

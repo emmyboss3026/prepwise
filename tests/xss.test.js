@@ -48,7 +48,7 @@ function hostileState(td) {
       plan: { breakfast: Q, lunch: R },
       recipes: { evil: evilRecipe(P), [Q]: evilRecipe(R), Pancakes: { name: P, servingLabel: Q } },
       customItems: [{ id: Q, name: P, buy: R, price: P, store: Q }, { id: R, name: Q, buy: P, price: R, store: "NOPE" + P }],
-      hiddenItems: [P]
+      hiddenItems: [P], tripBudgets: { [td]: P, [P]: Q, x: R }
     },
     log: { [td]: { breakfast: { meal: P, eaten: true }, lunch: { meal: Q }, dinner: { meal: R, eaten: true }, extra: { kcal: Q } }, [P]: { dinner: { meal: R } } },
     weights: { [P]: 80, [td]: 81 }
@@ -134,4 +134,26 @@ test("mapCloud skips rows with prototype keys and non-numeric weights", () => {
   assert.equal(({}).x, undefined);
   assert.deepEqual(Object.keys(out.items["2026-11-06"]), ["eggs"]);
   assert.deepEqual(out.weights, { "2026-11-02": 80 });
+});
+
+/* ---------- Budget card (Prepwise 2.2) ---------- */
+test("budget card shows status from settings and ignores unparseable stored budgets", () => {
+  const td = today(), ctx = boot("{}"), S = vm.runInContext("S", ctx);
+  S.trip = td; S.editList = false; S.group = "store";
+  S.settings.tripBudgets = { [td]: 500 };
+  const html = String(ctx.viewShop());
+  assert.match(html, /id="trip-budget"[^>]*value="500"/);
+  assert.match(html, /under budget/);
+  S.settings.tripBudgets = { [td]: P };
+  const bad = String(ctx.viewShop());
+  assert.match(bad, /id="trip-budget"[^>]*value=""/);
+  assert.ok(!/over budget|under budget/.test(bad));
+});
+test("budget forecast excludes pantry items in the rendered card", () => {
+  const td = today(), ctx = boot("{}"), S = vm.runInContext("S", ctx);
+  S.trip = td; S.settings.tripBudgets = { [td]: 1000 };
+  const eur = vm.runInContext("eur", ctx), t = ctx.tripTotals(td); // left excludes PANTRY
+  const html = String(ctx.viewShop());
+  assert.ok(html.includes(eur(t.left) + " still to buy"));
+  assert.match(html, /Pantry items are not counted/);
 });

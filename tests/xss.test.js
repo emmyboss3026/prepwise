@@ -32,7 +32,7 @@ function boot(storedJson) {
   };
   ctx.window = ctx; ctx.self = ctx;
   vm.createContext(ctx);
-  for (const f of ["recipes.js", "js/core.js", "js/prices.js", "js/app.js"]) vm.runInContext(read(f), ctx, { filename: f });
+  for (const f of ["recipes.js", "js/core.js", "js/prices.js", "js/recs.js", "js/app.js"]) vm.runInContext(read(f), ctx, { filename: f });
   return ctx;
 }
 
@@ -51,8 +51,12 @@ function hostileState(td) {
       hiddenItems: [P], tripBudgets: { [td]: P, [P]: Q, x: R },
       priceLog: [
         { id: R, item: Q, name: P, store: R, total: 1, amount: Q, base: 1, unit: "kg", price: 1, date: td, cur: "EUR", promo: 0 },
-        { id: Q, item: Q, name: P, store: P, total: 2, amount: R, base: 1, unit: "kg", price: 2, date: td, cur: "EUR", promo: 1 }
-      ]
+        { id: Q, item: Q, name: P, store: P, total: 2, amount: R, base: 1, unit: "kg", price: 2, date: td, cur: "EUR", promo: 1 },
+        { id: "c1", item: "chicken", name: P, store: "SPAR", total: 10, amount: "1 kg", base: 1, unit: "kg", price: 10, date: td, cur: "EUR", promo: 0 },
+        { id: "c2", item: "chicken", name: Q, store: P, total: 5, amount: "1 kg", base: 1, unit: "kg", price: 5, date: td, cur: "EUR", promo: 0 },
+        { id: "c3", item: "chicken", name: R, store: R, total: 6, amount: "1 kg", base: 1, unit: "kg", price: 6, date: td, cur: "EUR", promo: 0 }
+      ],
+      recExclude: [Q, 5], recStopCost: P
     },
     log: { [td]: { breakfast: { meal: P, eaten: true }, lunch: { meal: Q }, dinner: { meal: R, eaten: true }, extra: { kcal: Q } }, [P]: { dinner: { meal: R } } },
     weights: { [P]: 80, [td]: 81 }
@@ -77,6 +81,7 @@ function renderEverything() {
   S.trip = td; S.editList = false;
   S.pricesOpen = true; S.priceItem = Q;
   call("shop prices open", () => ctx.viewShop());
+  call("shop recs", () => ctx.viewShop());
   S.priceDraft = { itemKey: Q, itemName: P, other: true, store: R, total: P, amount: Q, date: Q, promo: true, id: R };
   call("shop price draft", () => ctx.viewShop());
   S.priceDraft = null; S.pricesOpen = false;
@@ -104,6 +109,7 @@ test("the test really exercises the escaping (escaped payloads are present)", ()
   assert.ok(out["cook day"].includes("&lt;b id=PWNA&gt;"), "email/recipe names should appear escaped");
   assert.ok(out["shop meal edit=true"].includes("&quot; autofocus onfocus=PWNB"), "custom item names should appear escaped");
   assert.ok(out["shop prices open"].includes("&lt;b id=PWNA&gt;"), "price history names should appear escaped");
+  assert.ok(out["shop recs"].includes("&lt;b id=PWNA&gt;") && out["shop recs"].includes("extra stop"), "recommendation store names should appear escaped");
   assert.ok(out["shop price draft"].includes("&quot; autofocus onfocus=PWNB"), "price form draft should appear escaped");
 });
 test("tampered data does not crash any view", () => {
@@ -167,4 +173,26 @@ test("budget forecast excludes pantry items in the rendered card", () => {
   const html = String(ctx.viewShop());
   assert.ok(html.includes(eur(t.left) + " still to buy"));
   assert.match(html, /Pantry items are not counted/);
+});
+
+/* ---------- Recommendations card (2.5) ---------- */
+test("recommendations card is honest: past prices, dates, no live-price claims, opt-out works", () => {
+  const td = today(), ctx = boot("{}"), S = vm.runInContext("S", ctx);
+  S.trip = td;
+  const noHist = String(ctx.viewShop());
+  assert.match(noHist, /No price history yet/);
+  S.settings.priceLog = [
+    { id: "a", item: "chicken", name: "Chicken", store: "SPAR / INTERSPAR", total: 10, amount: "1 kg", base: 1, unit: "kg", price: 10, date: td, cur: "EUR", promo: 0 },
+    { id: "b", item: "chicken", name: "Chicken", store: "HOFER", total: 5, amount: "1 kg", base: 1, unit: "kg", price: 5, date: td, cur: "EUR", promo: 0 }
+  ];
+  const html = String(ctx.viewShop());
+  assert.match(html, /Possible saving/);
+  assert.match(html, /not live shop prices/);
+  assert.match(html, /Price recorded/);
+  assert.match(html, /Some evidence/); // two entries, both from today: not high (needs 3), not low
+  assert.ok(!/live price|current price|in stock/i.test(html.replace(/not live shop prices/g, "")));
+  S.settings.recsOff = true;
+  const off = String(ctx.viewShop());
+  assert.match(off, /Recommendations are off/);
+  assert.ok(!/Possible saving/.test(off));
 });

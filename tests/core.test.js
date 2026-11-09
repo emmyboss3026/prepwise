@@ -168,7 +168,10 @@ test("mapCloud copes with empty results", () => {
 /* ---------- Owner's recipes must not change by accident ---------- */
 test("recipes.js is byte-identical to the owner's agreed version", () => {
   const buf = fs.readFileSync(path.join(__dirname, "..", "recipes.js"));
-  const sha = crypto.createHash("sha256").update(buf).digest("hex");
+  const lf = Buffer.from(buf.toString("utf8").replace(/
+/g, "
+")); // same hash whether git checked out LF or CRLF
+  const sha = crypto.createHash("sha256").update(lf).digest("hex");
   // Update this hash only when the owner deliberately changes a default recipe.
   assert.equal(sha, "e098a9ef06e042ce63f36225c510c541b99052870c41db58e3802019889d1264");
 });

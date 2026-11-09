@@ -32,7 +32,7 @@ function boot(storedJson) {
   };
   ctx.window = ctx; ctx.self = ctx;
   vm.createContext(ctx);
-  for (const f of ["recipes.js", "js/core.js", "js/app.js"]) vm.runInContext(read(f), ctx, { filename: f });
+  for (const f of ["recipes.js", "js/core.js", "js/prices.js", "js/app.js"]) vm.runInContext(read(f), ctx, { filename: f });
   return ctx;
 }
 
@@ -48,7 +48,15 @@ function hostileState(td) {
       plan: { breakfast: Q, lunch: R },
       recipes: { evil: evilRecipe(P), [Q]: evilRecipe(R), Pancakes: { name: P, servingLabel: Q } },
       customItems: [{ id: Q, name: P, buy: R, price: P, store: Q }, { id: R, name: Q, buy: P, price: R, store: "NOPE" + P }],
+<<<<<<< HEAD
       hiddenItems: [P], tripBudgets: { [td]: P, [P]: Q, x: R }
+=======
+      hiddenItems: [P],
+      priceLog: [
+        { id: R, item: Q, name: P, store: R, total: 1, amount: Q, base: 1, unit: "kg", price: 1, date: td, cur: "EUR", promo: 0 },
+        { id: Q, item: Q, name: P, store: P, total: 2, amount: R, base: 1, unit: "kg", price: 2, date: td, cur: "EUR", promo: 1 }
+      ]
+>>>>>>> ab900ec (2.4 price history: normalised unit prices, cheapest recorded store (WIP))
     },
     log: { [td]: { breakfast: { meal: P, eaten: true }, lunch: { meal: Q }, dinner: { meal: R, eaten: true }, extra: { kcal: Q } }, [P]: { dinner: { meal: R } } },
     weights: { [P]: 80, [td]: 81 }
@@ -71,6 +79,11 @@ function renderEverything() {
     for (const trip of [td, P]) { S.trip = trip; call(`shop ${group} edit=${editList} trip`, () => ctx.viewShop()); }
   }
   S.trip = td; S.editList = false;
+  S.pricesOpen = true; S.priceItem = Q;
+  call("shop prices open", () => ctx.viewShop());
+  S.priceDraft = { itemKey: Q, itemName: P, other: true, store: R, total: P, amount: Q, date: Q, promo: true, id: R };
+  call("shop price draft", () => ctx.viewShop());
+  S.priceDraft = null; S.pricesOpen = false;
   call("meals", () => ctx.viewMeals());
   call("cooking list", () => { S.recipe = null; S.editRecipe = null; return ctx.viewCooking(); });
   for (const id of ["evil", Q, "Pancakes"]) {
@@ -94,6 +107,8 @@ test("the test really exercises the escaping (escaped payloads are present)", ()
   assert.ok(out.home.includes("&lt;b id=PWNA&gt;"), "display name should appear escaped on Home");
   assert.ok(out["cook day"].includes("&lt;b id=PWNA&gt;"), "email/recipe names should appear escaped");
   assert.ok(out["shop meal edit=true"].includes("&quot; autofocus onfocus=PWNB"), "custom item names should appear escaped");
+  assert.ok(out["shop prices open"].includes("&lt;b id=PWNA&gt;"), "price history names should appear escaped");
+  assert.ok(out["shop price draft"].includes("&quot; autofocus onfocus=PWNB"), "price form draft should appear escaped");
 });
 test("tampered data does not crash any view", () => {
   const threw = Object.keys(renderEverything()).filter(k => k.endsWith("THREW"));

@@ -115,7 +115,7 @@ try{matchMedia("(prefers-color-scheme: dark)").addEventListener("change",()=>{sy
 syncTheme();
 
 /* ---------- State & storage ---------- */
-const S={tab:"home",group:"store",trip:tripOf(today()),logTrip:tripOf(today()),items:{},settings:{},log:{},weights:{},user:null,cloud:false,loading:false};
+const S={tab:"home",group:"store",shopFilter:"remaining",trip:tripOf(today()),logTrip:tripOf(today()),items:{},settings:{},log:{},weights:{},user:null,cloud:false,loading:false};
 let sb=null;
 try{if(window.supabase)sb=window.supabase.createClient(SB_URL,SB_KEY)}catch(e){sb=null}
 
@@ -313,6 +313,9 @@ function viewShop(){
     <div class="stat spent"><b>${t.est?"~":""}${eur(t.spent)}</b><span>Spent</span></div>
     <div class="stat"><b>${eur(t.left)}</b><span>Still to buy</span></div>
   </section>
+  <section class="card" aria-label="Shopping completion">
+    ${(()=>{const recs=S.items[S.trip]||{};const needed=all.filter(i=>recs[i[0]]?.status!=="have");const bought=needed.filter(i=>recs[i[0]]?.status==="bought").length;const remaining=needed.length-bought;const pct=needed.length?Math.round(100*bought/needed.length):100;return `<div class="row between"><h3>Shopping progress</h3><strong>${pct}% complete</strong></div><progress value="${bought}" max="${needed.length||1}" style="width:100%;accent-color:var(--accent,#23865a)" aria-label="Groceries purchased"></progress><p class="muted small" aria-live="polite">${bought} bought · ${remaining} left to buy · ${all.length-needed.length} already at home</p>`})()}
+  </section>
   <p class="muted small">${t.done} of ${all.length} items sorted.${t.est?" “~” means some bought items use my price until you type yours.":""} ${S.trip!==cur?"You're looking at a past trip.":""}</p>
   <div class="row between"><div class="seg" role="group" aria-label="Group by">
     <button type="button" data-act="group" data-g="store" aria-pressed="${S.group==="store"}">By store</button>
@@ -329,17 +332,20 @@ function viewShop(){
       </form>
       ${(S.settings.hiddenItems||[]).length?`<p class="small muted">${S.settings.hiddenItems.length} of my default items are hidden. <button class="chip" type="button" data-act="unhide">Show them again</button></p>`:""}</section>`;
   }
+  if(!ed)html+=`<div class="row between"><div class="seg" role="group" aria-label="Show groceries"><button type="button" data-act="shopfilter" data-filter="remaining" aria-pressed="${S.shopFilter==="remaining"}">Remaining</button><button type="button" data-act="shopfilter" data-filter="all" aria-pressed="${S.shopFilter==="all"}">All</button><button type="button" data-act="shopfilter" data-filter="bought" aria-pressed="${S.shopFilter==="bought"}">Bought</button></div></div>`;
+  const visible=ed?all:all.filter(i=>{const status=(S.items[S.trip]||{})[i[0]]?.status;return S.shopFilter==="all"||(S.shopFilter==="bought"?status==="bought":!status)});
+  if(!ed&&!visible.length)html+=`<section class="card"><p class="muted">No items in this view. Choose All to see your full list.</p></section>`;
   const rowFor=(i,extra)=>ed?`<li class="item"><span><span class="name">${esc(i[2])}</span><span class="meta">${esc(i[3])} · ${eur(i[4])}</span></span><span class="price"><button class="chip" type="button" data-act="rmitem" data-id="${esc(i[0])}" aria-label="Remove ${esc(i[2])}">Remove</button></span></li>`:itemRow(i,extra);
   if(S.group==="store"){
     for(const s of Object.keys(STORES)){
-      const its=all.filter(i=>i[1]===s);if(!its.length)continue;const recs=S.items[S.trip]||{};
+      const its=visible.filter(i=>i[1]===s);if(!its.length)continue;const recs=S.items[S.trip]||{};
       const open=its.filter(i=>!(recs[i[0]]||{}).status).reduce((a,i)=>a+i[4],0);
       html+=`<section class="group"><div class="ghead"><h3>${STORES[s].name}</h3><span class="gtot">${eur(open)} to buy</span></div><p class="muted small">${STORES[s].note}</p><ul>`;
       its.slice().sort((a,b)=>b[4]-a[4]).forEach(i=>{const u=Object.keys(i[6]);html+=rowFor(i,`Buy ${esc(i[3])}${u.length?" · for "+u.map(k=>esc((R()[k]||{}).name||k)).join(", "):""}`)});
       html+=`</ul></section>`;
     }
   }else{
-    const groups=DISH.map(d=>[d,all.filter(i=>i[6][d])]).concat([["My added items",all.filter(i=>!Object.keys(i[6]).length)]]);
+    const groups=DISH.map(d=>[d,visible.filter(i=>i[6][d])]).concat([["My added items",visible.filter(i=>!Object.keys(i[6]).length)]]);
     for(const [d,its] of groups){
       if(!its.length)continue;const recs=S.items[S.trip]||{};
       html+=`<section class="group"><div class="ghead"><h3>${esc((R()[d]||{}).name||d)}</h3><span class="gtot">${its.filter(i=>(recs[i[0]]||{}).status).length}/${its.length} sorted</span></div><ul>`;
@@ -556,6 +562,7 @@ main.addEventListener("click",e=>{
   if(a==="status"){const id=b.dataset.id,st=b.dataset.st;const r=Object.assign({status:"",paid:null,store:""},(S.items[S.trip]||{})[id]);
     r.status=r.status===st?"":st;if(r.status!=="bought"){r.paid=null;r.store=""}putItem(S.trip,id,r);keepFocus(()=>render(),b.id||null,`[data-act=status][data-id="${id}"][data-st="${st}"]`)}
   else if(a==="group"){S.group=b.dataset.g;render()}
+  else if(a==="shopfilter"){S.shopFilter=["remaining","all","bought"].includes(b.dataset.filter)?b.dataset.filter:"remaining";render()}
   else if(a==="reset"){if(b.dataset.confirm){clearTrip(S.trip);toast("Trip cleared");render()}else{b.dataset.confirm="1";b.textContent="Tap again to clear every tick and price"}}
   else if(a==="eat"){const d=b.dataset.day,sl=b.dataset.slot;const x=Object.assign({},(S.log[d]||{})[sl]);x.eaten=!x.eaten;x.meal=b.dataset.meal;putLog(d,sl,x);keepFocus(()=>render(),null,`[data-act=eat][data-day="${d}"][data-slot="${sl}"]`)}
   else if(a==="delw"){putWeight(b.dataset.day,null);render()}

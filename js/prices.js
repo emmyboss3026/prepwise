@@ -38,7 +38,8 @@
     return { ok: true, unit: "item", base: n }; // bare number, x, stk, pcs
   }
 
-  const storeKey = s => String(s || "").trim().toLowerCase();
+  /* "SPAR / INTERSPAR" and "SPAR" are the same store: only the part before "/" counts. */
+  const storeKey = s => String(s || "").trim().toLowerCase().split("/")[0].trim();
 
   /* Validate user input and build an observation. `input`: {itemKey,itemName,store,total,amount,date,promo,id}.
      `today` is YYYY-MM-DD. Returns {ok:true,obs} or {ok:false,error}. */

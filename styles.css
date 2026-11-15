@@ -327,6 +327,30 @@ dialog::backdrop{background:rgb(10 20 14 / .5)}
 }
 @media print{header.top,nav.tabs,.timers,.toast{display:none!important}body{padding:0}}
 
+
+/* Real, licensed product photographs. No emoji or AI-generated graphics. */
+.grocery-product{display:flex;align-items:center;gap:13px;min-width:0}
+.grocery-product-info{display:flex;flex-direction:column;min-width:0;gap:3px}
+.grocery-thumb{width:74px;height:74px;flex:0 0 74px;display:grid;place-items:center;position:relative;overflow:hidden;border-radius:14px;background:var(--surface2);border:1px solid var(--line);padding:0;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.06);color:var(--muted);font:600 .65rem var(--body);text-align:center}
+.grocery-thumb:focus-visible,.photo-choice button:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
+.grocery-thumb.has-photo{background:var(--surface)}
+.grocery-thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.grocery-photo-empty{letter-spacing:.02em;padding:5px;line-height:1.3}
+.grocery-photo-credit{font-size:.66rem;line-height:1.3;overflow-wrap:anywhere;color:var(--muted);text-decoration:underline;text-underline-offset:2px}
+.photo-choice-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px;margin:14px 0}
+.photo-choice{min-width:0;border:1px solid var(--line);background:var(--surface2);border-radius:14px;padding:8px;display:flex;flex-direction:column;gap:8px}
+.photo-choice button{width:100%;aspect-ratio:1/1;overflow:hidden;padding:0;border:0;border-radius:10px;cursor:pointer;background:var(--surface)}
+.photo-choice button:hover{outline:2px solid var(--accent)}
+.photo-choice img{width:100%;height:100%;object-fit:cover}
+.photo-choice a{overflow-wrap:anywhere;line-height:1.4}
+#photo-picker{scroll-margin-top:90px}
+#photo-picker form.row{align-items:end;flex-wrap:wrap;gap:10px}
+#photo-picker form.row label{flex:1 1 170px;min-width:0}
+#photo-picker>.row:last-child{align-items:end;flex-wrap:wrap;gap:10px}
+#photo-picker>.row:last-child label{flex:1 1 200px}
+@media(max-width:520px){.grocery-product{gap:9px}.grocery-thumb{width:58px;height:58px;flex-basis:58px;border-radius:12px}.photo-choice-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:359px){.grocery-thumb{width:50px;height:50px;flex-basis:50px}}
+
 /* Optional local-only photo preview in price history */
 .price-photo-box{grid-column:1/-1;min-width:0;padding:12px;border:1px dashed var(--line2);border-radius:var(--r);background:var(--surface2)}
 .price-photo-box input[type=file]{max-width:100%;width:100%;font:inherit}

@@ -59,3 +59,9 @@ test("user data is rendered through esc() in the new dashboard", () => {
 test("styles: the hidden attribute always wins over component display rules", () => {
   assert.match(css, /\[hidden\]\{display:none!important\}/);
 });
+test("grocery photographs load via a dedicated module, and broken images show a text fallback", () => {
+  assert.match(app, /img\.addEventListener\("error"/);
+  assert.match(app, /el\.textContent="Add photo"/);
+  assert.ok(html.includes('src="js/photos.js"'));
+  assert.ok(!app.includes("GROCERY_ART"));
+});

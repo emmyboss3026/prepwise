@@ -194,6 +194,7 @@ function render(opt){
   m.classList.remove("enter");
   if(opt&&opt.enter&&!reduceMotion()){[...m.children].forEach((c,i)=>c.style.setProperty("--i",i));void m.offsetWidth;m.classList.add("enter")}
   if(S.tab==="progress")drawChart();
+  if(S.tab==="shop")mountGroceryPhotos();
 }
 /* Switch section: render with a staggered entrance, reset scroll, move focus to the content for screen readers. */
 function go(tab,pre){if(tab!==S.tab){S.pinned={};clearPricePhoto()}S.tab=tab;if(pre)pre();render({enter:true});window.scrollTo(0,0);main.focus({preventScroll:true})}
@@ -285,13 +286,128 @@ function tripOptions(sel){
   list.sort().reverse();
   return list.map(t=>`<option value="${esc(t)}" ${t===sel?"selected":""}>${fmtDate(t,{day:"numeric",month:"short",year:"numeric"})}${t===cur?" (current)":""}</option>`).join("");
 }
+
+/* Real product photography, loaded lazily from Wikimedia Commons.
+   Generic pictures are only examples; they never claim to show the exact brand/package. */
+function safeGroceryImageUrl(raw){
+  if(typeof raw!=="string"||raw.length>1500)return "";
+  try{const u=new URL(raw);if(u.protocol!=="https:"||!u.hostname||u.username||u.password)return "";if(u.href.length>500&&!["upload.wikimedia.org","commons.wikimedia.org"].includes(u.hostname))return "";return u.href}catch(e){return ""}
+}
+const PHOTO_CACHE_KEY="prepwise-commons-photos-v1";
+let photoObserver=null,photoPending=0,photoPickId=null,photoChoices=[],photoSearchToken=0,photoSearchError="",photoSearchTerm="";
+let photoCache={};
+try{photoCache=JSON.parse(localStorage.getItem(PHOTO_CACHE_KEY)||"{}")||{}}catch(e){photoCache={}}
+function photoRecord(i){
+  const c=(S.settings.customItems||[]).find(x=>x.id===i[0]);
+  const chosen=(S.settings.productImages||{})[i[0]];
+  if(chosen&&safeGroceryImageUrl(chosen.url))return chosen;
+  if(c&&safeGroceryImageUrl(c.imageUrl))return {url:c.imageUrl,source:"",license:"Your photo link",title:"Custom photo"};
+  return null;
+}
+function groceryThumb(i){
+  return `<button type="button" class="grocery-thumb" data-act="choosephoto" data-id="${esc(i[0])}" data-photo-query="${esc(PWPH.queryFor(i[0],i[2]))}" aria-label="View or choose a photo for ${esc(i[2])}"><span class="grocery-photo-empty">Photo</span></button`;
+}
+function showGroceryPhoto(el,photo){
+  if(!el||!el.isConnected||!photo||!safeGroceryImageUrl(photo.url))return;
+  const img=document.createElement("img");
+  img.src=photo.url;img.alt="";img.loading="lazy";img.decoding="async";img.referrerPolicy="no-referrer";
+  img.addEventListener("error",()=>{if(img.parentNode===el){el.replaceChildren();el.textContent="Add photo";el.classList.remove("has-photo");const info=el.parentElement&&el.parentElement.querySelector(".grocery-product-info");const credit=info&&info.querySelector(".grocery-photo-credit");if(credit)credit.remove()}},{once:true});
+  el.replaceChildren(img);
+  el.classList.add("has-photo");
+  const info=el.parentElement&&el.parentElement.querySelector(".grocery-product-info");
+  if(info){
+    const existing=info.querySelector(".grocery-photo-credit");if(existing)existing.remove();
+    if(photo.source){
+      const link=document.createElement("a");link.className="grocery-photo-credit";
+      link.href=photo.source;link.target="_blank";link.rel="noopener noreferrer";
+      link.textContent="Photo: "+(photo.artist||"Wikimedia Commons")+" · "+(photo.license||"See license");
+      link.title="Open original image, creator and reuse license";info.appendChild(link);
+    }
+  }
+  el.title=photo.source?"Representative real photo; not necessarily exact packaging. Tap to choose another.":"Custom linked photo; tap to change.";
+}
+function photoFromCache(term){
+  const x=photoCache[term];if(!x||Date.now()-x.time>(x.photo?14:1)*86400000)return undefined;
+  return x.photo||null;
+}
+function rememberPhoto(term,photo){
+  photoCache[term]={time:Date.now(),photo};
+  const keys=Object.keys(photoCache).sort((a,b)=>photoCache[b].time-photoCache[a].time).slice(0,90);
+  const pruned={};for(const k of keys)pruned[k]=photoCache[k];photoCache=pruned;
+  try{localStorage.setItem(PHOTO_CACHE_KEY,JSON.stringify(photoCache))}catch(e){}
+}
+const photoQueue=[],photoInFlight=new Map();
+function photoLookup(term){
+  const cached=photoFromCache(term);if(cached!==undefined)return Promise.resolve(cached);
+  if(photoInFlight.has(term))return photoInFlight.get(term);
+  const task=new Promise(resolve=>{photoQueue.push({term,resolve});drainPhotoQueue()});
+  photoInFlight.set(term,task);
+  task.finally(()=>photoInFlight.delete(term));
+  return task;
+}
+function drainPhotoQueue(){
+  while(photoPending<2&&photoQueue.length){
+    const {term,resolve}=photoQueue.shift();photoPending++;
+    PWPH.search(term).then(photos=>{const first=photos[0]||null;rememberPhoto(term,first);resolve(first)})
+      .catch(()=>resolve(null)).finally(()=>{photoPending--;setTimeout(drainPhotoQueue,350)});
+  }
+}
+function hydrateGroceryPhoto(el){
+  const i=items().find(x=>x[0]===el.dataset.id);if(!i)return;
+  const chosen=photoRecord(i);
+  if(chosen){showGroceryPhoto(el,chosen);return}
+  const term=el.dataset.photoQuery;
+  photoLookup(term).then(photo=>{if(photo&&el.isConnected&&el.dataset.photoQuery===term&&!(S.settings.productImages||{})[i[0]])showGroceryPhoto(el,photo)});
+}
+function mountGroceryPhotos(){
+  if(photoObserver)photoObserver.disconnect();
+  const nodes=[...document.querySelectorAll(".grocery-thumb[data-photo-query]")];
+  if(!("IntersectionObserver" in window)){nodes.forEach(hydrateGroceryPhoto);return}
+  photoObserver=new IntersectionObserver(entries=>{
+    entries.forEach(entry=>{if(entry.isIntersecting){photoObserver.unobserve(entry.target);hydrateGroceryPhoto(entry.target)}})
+  },{rootMargin:"250px"});
+  nodes.forEach(n=>photoObserver.observe(n));
+}
+function photoCandidateList(){
+  if(photoSearchError)return `<p class="small" role="alert">${esc(photoSearchError)}</p>`;
+  if(!photoChoices.length)return `<p class="muted small">No suitable licensed photographs found. Try a shorter search like “potatoes” or paste your own photo URL.</p>`;
+  return photoChoices.map((p,n)=>`<div class="photo-choice"><button type="button" data-act="photoselect" data-index="${n}" aria-label="Use photo ${n+1}: ${esc(p.title)}"><img loading="lazy" src="${esc(p.url)}" alt="${esc(p.title)}" referrerpolicy="no-referrer"></button><a href="${esc(p.source)}" target="_blank" rel="noopener noreferrer" class="small">Source / license: ${esc(p.license)}</a></div>`).join("");
+}
+function viewPhotoPicker(){
+  if(!photoPickId)return "";
+  const i=items().find(x=>x[0]===photoPickId);if(!i)return "";
+  return `<section class="card" id="photo-picker" aria-label="Choose a real product photo"><div class="row between"><h3>Find a real picture: ${esc(i[2])}</h3><button class="chip" type="button" data-act="photoclose">Close</button></div>
+    <p class="small muted">Photos come from Wikimedia Commons. Generic food photographs may not match the exact brand or package. Review the picture before selecting it; licensing details are linked below each result. Searching shares the product name with Wikimedia.</p>
+    <form data-form="photosearch" class="row"><label class="f" for="photo-search">Search photographs<input id="photo-search" maxlength="80" value="${esc(photoSearchTerm)}"></label><button class="btn" type="submit">Search</button></form>
+    <div class="photo-choice-grid" id="photo-options" aria-live="polite">${photoCandidateList()}</div>
+    <div class="row"><label class="f" for="photo-url">Or paste a direct HTTPS image link<input id="photo-url" type="url" maxlength="1500" placeholder="https://…/photo.jpg"></label><button class="chip" type="button" data-act="photourl">Use my link</button><button class="chip" type="button" data-act="photoclear">Reset to automatic photo</button></div>
+  </section>`;
+}
+async function runPhotoSearch(term){
+  const id=photoPickId,token=++photoSearchToken;
+  photoSearchTerm=PWPH.cleanTerm(term);photoChoices=[];photoSearchError="";
+  const holder=$("#photo-options");if(holder)holder.innerHTML='<p class="muted small" role="status">Finding real photographs…</p>';
+  try{
+    const photos=await PWPH.search(photoSearchTerm);
+    if(id!==photoPickId||token!==photoSearchToken)return;
+    photoChoices=photos;
+  }catch(e){if(id!==photoPickId||token!==photoSearchToken)return;photoSearchError="Photo search unavailable. Please check your connection or use a direct link."}
+  const box=$("#photo-options");if(box)box.innerHTML=photoCandidateList();
+}
+function closePhotoPicker(){photoSearchToken++;photoPickId=null;photoChoices=[];photoSearchError="";render()}
+function saveProductPhoto(photo){
+  if(!photoPickId||!safeGroceryImageUrl(photo.url))return;
+  S.settings.productImages=Object.assign({},S.settings.productImages,{[photoPickId]:photo});
+  putSettings();toast("Product photo saved");closePhotoPicker();
+}
+
 function itemRow(i,extra){
   const [id,,name,buy,price,src]=i;const r=(S.items[S.trip]||{})[id]||{};const st=r.status==="have"||r.status==="bought"?r.status:"";
   const right=st==="bought"&&r.paid!=null?`${eur(r.paid)}<small>you paid</small>`:st==="have"?`${eur(price)}<small>at home</small>`:`${eur(price)}<small>${src==="est"?"est.":"store price"}</small>`;
   const diff=st==="bought"&&r.paid!=null?(price-r.paid>=0?`<span class="diff save">${eur(price-r.paid)} under my price</span>`:`<span class="diff more">${eur(r.paid-price)} over my price</span>`):"";
   const tag=src==="offer"?'<span class="tag offer">Offer to 18 Nov</span>':"";
   return `<li class="item${st?" is-"+st:""}">
-    <span><span class="name">${esc(name)}</span><span class="meta">${extra}</span>${tag}</span>
+    <span class="grocery-product">${groceryThumb(i)}<span class="grocery-product-info"><span class="name">${esc(name)}</span><span class="meta">${extra}</span>${tag}</span></span>
     <span class="price">${right}</span>
     <span class="acts">
       <button type="button" class="chip have" data-act="status" data-id="${esc(id)}" data-st="have" aria-pressed="${st==="have"}">I have it</button>
@@ -441,12 +557,14 @@ function viewShop(){
         <label class="f" for="ni-name">Item<input type="text" id="ni-name" required maxlength="80" placeholder="e.g. Greek yogurt 1 kg"></label>
         <label class="f" for="ni-buy">How much to buy<input type="text" id="ni-buy" maxlength="40" placeholder="e.g. 2 tubs"></label>
         <label class="f" for="ni-price">Expected price, €<input type="text" inputmode="decimal" id="ni-price" placeholder="e.g. 2,49"></label>
+        <label class="f" for="ni-image">Product image URL (optional)<input type="url" id="ni-image" maxlength="500" placeholder="https://example.com/product.jpg"></label>
         <label class="f" for="ni-store">Store<select id="ni-store">${STORE_OPTS.map(([v,l])=>`<option value="${v}">${l}</option>`).join("")}</select></label>
         <div class="row"><button class="btn" type="submit">Add to list</button></div>
       </form>
       ${(S.settings.hiddenItems||[]).length?`<p class="small muted">${S.settings.hiddenItems.length} of my default items are hidden. <button class="chip" type="button" data-act="unhide">Show them again</button></p>`:""}</section>`;
   }
   if(!ed)html+=`<div class="row between"><div class="seg" role="group" aria-label="Show groceries"><button type="button" data-act="shopfilter" data-filter="remaining" aria-pressed="${S.shopFilter==="remaining"}">Remaining</button><button type="button" data-act="shopfilter" data-filter="all" aria-pressed="${S.shopFilter==="all"}">All</button><button type="button" data-act="shopfilter" data-filter="bought" aria-pressed="${S.shopFilter==="bought"}">Bought</button></div></div>`;
+  if(!ed&&photoPickId)html+=viewPhotoPicker();
   const visible=ed?all:all.filter(i=>{const status=(S.items[S.trip]||{})[i[0]]?.status;return S.shopFilter==="all"||S.pinned[i[0]]||(S.shopFilter==="bought"?status==="bought":!status)}); // pinned: a row you just tapped stays put so you can enter its price
   if(!ed&&!visible.length)html+=`<section class="card"><p class="muted">No items in this view. Choose All to see your full list.</p></section>`;
   const rowFor=(i,extra)=>ed?`<li class="item"><span><span class="name">${esc(i[2])}</span><span class="meta">${esc(i[3])} · ${eur(i[4])}</span></span><span class="price"><button class="chip" type="button" data-act="rmitem" data-id="${esc(i[0])}" aria-label="Remove ${esc(i[2])}">Remove</button></span></li>`:itemRow(i,extra);
@@ -676,6 +794,17 @@ main.addEventListener("click",e=>{
   const b=e.target.closest("[data-act]");if(!b||b.tagName==="SELECT"||b.tagName==="INPUT")return;const a=b.dataset.act;
   if(a==="status"){const id=b.dataset.id,st=b.dataset.st;S.pinned[id]=1;const r=Object.assign({status:"",paid:null,store:""},(S.items[S.trip]||{})[id]);
     r.status=r.status===st?"":st;if(r.status!=="bought"){r.paid=null;r.store=""}putItem(S.trip,id,r);keepFocus(()=>render(),b.id||null,`[data-act=status][data-id="${id}"][data-st="${st}"]`)}
+  else if(a==="choosephoto"){
+    photoPickId=b.dataset.id;photoSearchTerm=PWPH.queryFor(b.dataset.id,(items().find(i=>i[0]===b.dataset.id)||[])[2]);photoChoices=[];photoSearchError="";
+    render();const picker=$("#photo-picker");if(picker)picker.scrollIntoView({block:"start"});runPhotoSearch(photoSearchTerm)
+  }
+  else if(a==="photoclose"){closePhotoPicker()}
+  else if(a==="photoselect"){const picked=photoChoices[Number(b.dataset.index)];if(picked)saveProductPhoto(picked)}
+  else if(a==="photourl"){const url=safeGroceryImageUrl($("#photo-url")?.value.trim()||"");if(!url){toast("Please enter a valid HTTPS photo URL");return}
+    saveProductPhoto({url,title:"Your linked photo",source:"",license:"User-supplied image",kind:"custom"})}
+  else if(a==="photoclear"){if(!photoPickId)return;const copy=Object.assign({},S.settings.productImages);delete copy[photoPickId];S.settings.productImages=copy;
+    const c=(S.settings.customItems||[]).find(x=>x.id===photoPickId);if(c)delete c.imageUrl;
+    putSettings();toast("Automatic photos restored");closePhotoPicker()}
   else if(a==="group"){S.group=b.dataset.g;render()}
   else if(a==="shopfilter"){S.shopFilter=["remaining","all","bought"].includes(b.dataset.filter)?b.dataset.filter:"remaining";S.pinned={};render()}
   else if(a==="reset"){if(b.dataset.confirm){clearTrip(S.trip);toast("Trip cleared");render()}else{b.dataset.confirm="1";b.textContent="Tap again to clear every tick and price"}}
@@ -719,6 +848,8 @@ main.addEventListener("click",e=>{
   else if(a==="signin")openSignin();
   else if(a==="signout"){sb.auth.signOut()}
 });
+// a custom image that fails to load is removed so the illustration underneath shows (error events do not bubble, hence capture)
+main.addEventListener("error",e=>{if(e.target&&e.target.matches&&e.target.matches(".grocery-thumb img"))e.target.remove()},true);
 main.addEventListener("change",e=>{
   const el=e.target,a=el.dataset.act;if(!a)return;
   if(a==="trip"){S.trip=el.value;S.pinned={};render()}
@@ -742,8 +873,9 @@ main.addEventListener("change",e=>{
 });
 main.addEventListener("submit",e=>{
   const fm=e.target.dataset.form;
+  if(fm==="photosearch"){e.preventDefault();runPhotoSearch($("#photo-search").value);return}
   if(fm==="additem"){e.preventDefault();const name=$("#ni-name").value.trim();if(!name)return;
-    const c={id:"u-"+Date.now().toString(36),name:name.slice(0,80),buy:$("#ni-buy").value.trim().slice(0,40),price:num($("#ni-price").value)||0,store:$("#ni-store").value};
+    const c={id:"u-"+Date.now().toString(36),name:name.slice(0,80),buy:$("#ni-buy").value.trim().slice(0,40),price:num($("#ni-price").value)||0,store:$("#ni-store").value,imageUrl:safeGroceryImageUrl($("#ni-image").value.trim())};
     S.settings.customItems=(S.settings.customItems||[]).concat([c]);putSettings();toast("Added to your list");render();return}
   if(fm==="recipe"){e.preventDefault();saveRecipe();return}
   if(fm==="price"){e.preventDefault();submitPrice();return}

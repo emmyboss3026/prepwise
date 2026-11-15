@@ -389,7 +389,7 @@ async function lookupBarcode(raw){
     const res=await fetch("/api/product?barcode="+encodeURIComponent(code),{credentials:"omit",headers:{Accept:"application/json"}});
     const data=await res.json();if(id!==photoPickId||token!==barcodeToken)return;
     if(!res.ok||!data.product)throw new Error(data.error||"Product not found.");
-    const p=PWB.normalizeProduct({product:data.product},code);
+    const p=PWB.normalizeProduct({product:{code:data.product.barcode,product_name:data.product.name,brands:data.product.brand,image_front_url:data.product.url}},code);
     if(!p)throw new Error("The catalog returned an invalid or unlicensed product photo.");
     barcodeCandidate=p;
   }catch(e){if(id!==photoPickId||token!==barcodeToken)return;barcodeError=String(e.message||"Barcode lookup failed.").slice(0,160)}

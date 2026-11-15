@@ -42,7 +42,7 @@
     const url=safeUrl(i.thumburl||i.url),source=safeUrl(i.descriptionurl);
     if(!url||!source||!url.includes("wikimedia.org"))return null;
     const artistHtml=String(meta.Artist&&meta.Artist.value||"");
-    const artist=artistHtml.replace(/<[^>]*>/g," ").replace(/&nbsp;|&#160;/gi," ").replace(/&amp;/gi,"&").replace(/&quot;/gi,'"').replace(/&#39;|&apos;/gi,"'").replace(/\\s+/g," ").trim().slice(0,100);
+    const artist=artistHtml.replace(/<[^>]*>/g," ").replace(/&nbsp;|&#160;/gi," ").replace(/&amp;/gi,"&").replace(/&quot;/gi,'"').replace(/&#39;|&apos;/gi,"'").replace(/\s+/g," ").trim().slice(0,100);
     return {url,source,title,license:lic.slice(0,50),artist,kind:"representative"};
   }
   function rank(photo,term){

@@ -851,8 +851,13 @@ main.addEventListener("click",e=>{
   else if(a==="timer")startTimer(parseFloat(b.dataset.min),b.dataset.label);
   else if(a==="clearck"){setCk(S.recipe,{});render()}
   else if(a==="edit"){S.editRecipe=b.dataset.id;render();window.scrollTo(0,0)}
-  else if(a==="newrecipe"){S.editRecipe="__new";render();window.scrollTo(0,0)}
-  else if(a==="canceledit"){S.editRecipe=null;render();window.scrollTo(0,0)}
+  else if(a==="recipestudio"){S.recipe=null;S.editRecipe=null;S.shoppingRecipe=null;S.recipeStudio=true;S.recipeStudioInput=S.recipeStudioInput||{};render();window.scrollTo(0,0)}
+  else if(a==="studioexit"){clearStudioVideo();S.recipeStudio=false;S.recipeStudioDraft=null;S.recipeStudioInput=null;render()}
+  else if(a==="studiovideoclear"){clearStudioVideo();const input=$("#studio-video");if(input)input.value="";refreshStudioVideo()}
+  else if(a==="recipeshopopen"){S.shoppingRecipe=S.recipe;render();$("#main .studio-shop")?.scrollIntoView({block:"start"})}
+  else if(a==="closerecipeshop"){S.shoppingRecipe=null;render()}
+  else if(a==="newrecipe"){S.recipeStudio=false;S.recipeStudioDraft=null;clearStudioVideo();S.editRecipe="__new";render();window.scrollTo(0,0)}
+  else if(a==="canceledit"){S.editRecipe=null;if(S.recipeStudioDraft){S.recipeStudio=true;S.recipeStudioDraft=null}else S.recipeStudio=false;render();window.scrollTo(0,0)}
   else if(a==="revert"){const o=Object.assign({},S.settings.recipes);delete o[b.dataset.id];S.settings.recipes=o;putSettings();toast("Back to your original recipe");render()}
   else if(a==="delrecipe"){if(b.dataset.confirm){const id=b.dataset.id;const o=Object.assign({},S.settings.recipes);if(DEF[id])o[id]={deleted:true};else delete o[id];S.settings.recipes=o;putSettings();S.recipe=null;toast("Meal deleted");render()}else{b.dataset.confirm="1";b.textContent="Tap again to delete"}}
   else if(a==="restore"){const o=Object.assign({},S.settings.recipes);Object.keys(o).forEach(k=>{if(o[k]&&o[k].deleted)delete o[k]});S.settings.recipes=o;putSettings();render()}
@@ -866,6 +871,14 @@ main.addEventListener("change",e=>{
   if(a==="trip"){S.trip=el.value;S.pinned={};render()}
   else if(a==="recstop"){const p=PW.parseBudget(el.value);if(!p.ok||p.value>100){toast("Enter an extra-stop cost from €0 to €100");render();return}
     if(p.value==null||p.value===0)delete S.settings.recStopCost;else S.settings.recStopCost=p.value;putSettings();setTimeout(()=>keepFocus(()=>render()),0)}
+  else if(a==="batchcalories"){const total=el.value.trim()===""?null:num(el.value),serves=Math.round(num($("#e-serves")?.value)||0);if(total!=null&&total>=0&&serves>0&&serves<=200&&$("#e-kcal"))$("#e-kcal").value=String(Math.round(total/serves*10)/10)}
+  else if(a==="studiofile"){const file=el.files&&el.files[0];clearStudioVideo();
+    if(!file){refreshStudioVideo();return}
+    if(!file.type.startsWith("video/")||file.size<1||file.size>150*1024*1024){toast("Choose a video file up to 150 MB");el.value="";refreshStudioVideo();return}
+    studioVideoUrl=URL.createObjectURL(file);studioVideoName=file.name.slice(0,100);refreshStudioVideo()}
+  else if(a==="studiocaptions"){const file=el.files&&el.files[0];if(!file)return;
+    if(file.size<1||file.size>1024*1024||!(/\.(srt|vtt|txt)$/i.test(file.name)||["text/plain","text/vtt"].includes(file.type))){toast("Choose a .txt, .srt or .vtt file up to 1 MB");el.value="";return}
+    file.text().then(raw=>{if(!S.recipeStudio||!$("#studio-text"))return;const cleaned=raw.replace(/^WEBVTT\s*/i,"").split(/\r?\n/).filter(line=>!/^\s*\d+\s*$/.test(line)&&!/\d\d:\d\d:\d\d[,\.]\d+\s*-->/.test(line)&&!/\d\d:\d\d[,\.]\d+\s*-->/.test(line)).join("\n").slice(0,10000);const box=$("#studio-text");box.value=(box.value.trim()?box.value.trim()+"\n\n":"")+cleaned;box.focus();toast("Caption text imported — review before building")}).catch(()=>toast("Couldn't read caption file"))}
   else if(a==="pricephoto"){const file=el.files&&el.files[0];clearPricePhoto();if(!file){refreshPricePhoto();return}
     const bad=photoProblem(file);if(bad){toast(bad);el.value="";refreshPricePhoto();return}
     pricePhotoUrl=URL.createObjectURL(file);pricePhotoName=file.name.slice(0,80);refreshPricePhoto()}
@@ -888,6 +901,22 @@ main.addEventListener("submit",e=>{
   if(fm==="additem"){e.preventDefault();const name=$("#ni-name").value.trim();if(!name)return;
     const c={id:"u-"+Date.now().toString(36),name:name.slice(0,80),buy:$("#ni-buy").value.trim().slice(0,40),price:num($("#ni-price").value)||0,store:$("#ni-store").value,imageUrl:safeGroceryImageUrl($("#ni-image").value.trim())};
     S.settings.customItems=(S.settings.customItems||[]).concat([c]);putSettings();toast("Added to your list");render();return}
+  if(fm==="studiobuild"){e.preventDefault();const input=$("#studio-text")?.value.trim()||"";if(!input){toast("Add your idea, ingredient list or video caption first");return}
+    const source=$("#studio-source")?.value.trim()||"";if(source&&!PWRS.safeLink(source)){toast("Enter an HTTPS source link");return}
+    S.recipeStudioInput={name:$("#studio-title").value.trim(),slot:$("#studio-slot").value,serves:$("#studio-serves").value,text:input,sourceUrl:source};
+    S.recipeStudioDraft=PWRS.parse(input,S.recipeStudioInput);
+    S.recipeStudio=false;S.editRecipe="__new";render();window.scrollTo(0,0);return}
+  if(fm==="recipeshop"){e.preventDefault();const r=R()[S.shoppingRecipe];if(!r){toast("Open a saved recipe first");return}
+    const selected=[...e.target.querySelectorAll('input[name="rshop-ing"]:checked')].map(el=>Number(el.value));
+    if(!selected.length){toast("Select at least one ingredient with a quantity");return}
+    const mapped=PWRS.proposedItems(r,r.id,selected,$("#recipe-shop-store").value);
+    const existing=Array.isArray(S.settings.customItems)?S.settings.customItems.slice():[];
+    let count=0;for(const item of mapped){const idx=existing.findIndex(c=>c.id===item.id&&c.trip===S.trip);
+      if(idx<0){existing.push(Object.assign({},item,{trip:S.trip}));count++}
+      else existing[idx]=Object.assign({},existing[idx],{name:item.name,buy:item.buy});
+    }
+    S.settings.customItems=existing;putSettings();S.shoppingRecipe=null;S.shopFilter="remaining";S.editList=false;
+    go("shop");toast(count+" new ingredient"+(count===1?"":"s")+" added to this trip");return}
   if(fm==="recipe"){e.preventDefault();saveRecipe();return}
   if(fm==="price"){e.preventDefault();submitPrice();return}
   if(fm!=="weight")return;e.preventDefault();
@@ -906,10 +935,10 @@ function saveRecipe(){
   const name=g("#e-name").trim();if(!name){toast("Give the meal a name");return}
   const rec={name:name.slice(0,80),slot:g("#e-slot"),serves:Math.max(1,Math.round(num(g("#e-serves"))||1)),servingLabel:g("#e-sl").trim().slice(0,40),time:g("#e-time").trim().slice(0,60),
     kcal:num(g("#e-kcal"))||0,p:num(g("#e-p"))||0,c:num(g("#e-c"))||0,f:num(g("#e-f"))||0,fib:num(g("#e-fib"))||0,
-    oven:pairs(g("#e-oven")),ingredients:pairs(g("#e-ing")),steps:lines(g("#e-steps")),portion:lines(g("#e-portion")),storage:lines(g("#e-storage")),notes:g("#e-notes").trim()};
+    oven:pairs(g("#e-oven")),ingredients:pairs(g("#e-ing")),steps:lines(g("#e-steps")),portion:lines(g("#e-portion")),storage:lines(g("#e-storage")),notes:g("#e-notes").trim().slice(0,1500),sourceUrl:PWRS.safeLink(g("#e-source")),nutritionUnverified:g("#e-kcal").trim()==="",draftIncomplete:!g("#e-ing").trim()||!g("#e-steps").trim()};
   const id=S.editRecipe==="__new"?"r-"+Date.now().toString(36):S.editRecipe;
   S.settings.recipes=Object.assign({},S.settings.recipes,{[id]:rec});putSettings();
-  S.editRecipe=null;S.recipe=id;toast("Meal saved");render();window.scrollTo(0,0);
+  S.editRecipe=null;S.recipe=id;S.recipeStudio=false;S.recipeStudioDraft=null;S.recipeStudioInput=null;clearStudioVideo();toast("Meal saved");render();window.scrollTo(0,0);
 }
 let timers=[];let tick=null;let audio=null;
 function startTimer(min,label){

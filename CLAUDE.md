@@ -6,6 +6,7 @@ Plain static site, no build step:
 - `index.html` — page shell: icon sprite, header, tab bar, sign-in dialog
 - `styles.css` — design system (tokens, light/dark themes, components, motion)
 - `js/prices.js` — price history logic (unit normalisation, cheapest recorded store). No DOM, unit-tested
+- `js/needs.js` — recipe-to-grocery mapping (`MAP`: ingredient name → item id, keyed by the text in `recipes.js`) and `needsFor()` totals per item. Unreadable amounts ("1 small", "to taste") are listed, never guessed; grams are never added to counts. No DOM, unit-tested. Not yet shown in the UI
 - `js/core.js` — pure logic (dates, scaling, grocery totals, body maths, storage normalisation). No DOM; unit-tested
 - `js/app.js` — state, Supabase sync, all views and events
 - `recipes.js` — `window.DEFAULT_RECIPES`, the owner's six default recipes (guarded by a hash test)
@@ -49,4 +50,4 @@ Cook day (countdown to the 2-weekly Friday cook day, .ics export, chicken split,
 ## Roadmap status
 Implemented (Phase 1): redesigned visual system with light/dark themes, home dashboard, skeleton loading, interactive weight chart, empty states, unit tests for date, scaling, grocery, persistence and migration logic.
 Planned, not built: recipe-driven grocery generation, adjustable servings across the whole plan, pantry inventory, meal calendar, recipe search and filters, freezer inventory, meal-prep history, data export and backup, CSP and SRI hardening, PWA/offline.
-Implemented (2.4): personal price history, per kg/litre/item normalisation, cheapest recorded store with price age. Planned: photo/receipt capture (2.3, needs approval for any paid OCR), store recommendations (2.5), recipe-driven grocery quantities.
+Implemented (2.4): personal price history, per kg/litre/item normalisation, cheapest recorded store with price age. Planned: photo/receipt capture (2.3, needs approval for any paid OCR), store recommendations (2.5), recipe-driven grocery quantities (mapping prepared in `js/needs.js`; UI pending).

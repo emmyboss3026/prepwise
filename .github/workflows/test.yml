@@ -12,7 +12,7 @@ on:
   push:
     branches:
       - main
-      - feat/prepwise-nova-visual-redesign
+      - feat/recipe-studio-ideas-import-shopping
 jobs:
   unit-and-static:
     runs-on: ubuntu-latest
@@ -28,6 +28,8 @@ jobs:
           node --check js/core.js
           node --check js/app.js
           node --check js/photos.js
+          node --check js/recipe-studio.js
+          node --check js/recipe-studio-ui.js
       - name: Unit, security and structural tests
         run: node --test tests/*.test.js
 

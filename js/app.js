@@ -295,6 +295,7 @@ function safeGroceryImageUrl(raw){
 }
 const PHOTO_CACHE_KEY="prepwise-commons-photos-v1";
 let photoObserver=null,photoPending=0,photoPickId=null,photoChoices=[],photoSearchToken=0,photoSearchError="",photoSearchTerm="";
+let barcodeCandidate=null,barcodeError="",barcodeLoading=false,barcodeToken=0;
 let photoCache={};
 try{photoCache=JSON.parse(localStorage.getItem(PHOTO_CACHE_KEY)||"{}")||{}}catch(e){photoCache={}}
 function photoRecord(i){
@@ -373,6 +374,27 @@ function photoCandidateList(){
   if(!photoChoices.length)return `<p class="muted small">No suitable licensed photographs found. Try a shorter search like “potatoes” or paste your own photo URL.</p>`;
   return photoChoices.map((p,n)=>`<div class="photo-choice"><button type="button" data-act="photoselect" data-index="${n}" aria-label="Use photo ${n+1}: ${esc(p.title)}"><img loading="lazy" src="${esc(p.url)}" alt="${esc(p.title)}" referrerpolicy="no-referrer"></button><a href="${esc(p.source)}" target="_blank" rel="noopener noreferrer" class="small">Source / license: ${esc(p.license)}</a></div>`).join("");
 }
+function barcodePreview(){
+  if(barcodeLoading)return `<p class="small muted" role="status">Checking the product barcode…</p>`;
+  if(barcodeError)return `<p class="small" role="alert">${esc(barcodeError)}</p>`;
+  if(!barcodeCandidate)return `<p class="muted small">Enter a barcode to find a photograph of the exact package. No camera access or photo upload is needed.</p>`;
+  const p=barcodeCandidate;
+  return `<div class="barcode-match"><img src="${esc(p.url)}" alt="Product package: ${esc(p.title)}" loading="lazy" referrerpolicy="no-referrer"><div><b>${esc(p.name)}</b><p class="small">${esc(p.brand||"Brand unspecified")} · Barcode ${esc(p.barcode)}</p><a class="small" href="${esc(p.source)}" rel="noopener noreferrer" target="_blank">Open Food Facts contributors · CC BY-SA</a><p><button class="btn" type="button" data-act="barcodeapply">Use this exact-package photo</button></p></div></div>`;
+}
+async function lookupBarcode(raw){
+  const id=photoPickId,token=++barcodeToken;barcodeCandidate=null;barcodeError="";barcodeLoading=true;
+  const code=PWB.gtin(raw);
+  if(!code){barcodeError="Enter a valid 8, 12, 13, or 14-digit barcode (including its check digit).";barcodeLoading=false;render();return}
+  try{
+    const res=await fetch("/api/product?barcode="+encodeURIComponent(code),{credentials:"omit",headers:{Accept:"application/json"}});
+    const data=await res.json();if(id!==photoPickId||token!==barcodeToken)return;
+    if(!res.ok||!data.product)throw new Error(data.error||"Product not found.");
+    const p=PWB.normalizeProduct({product:{code:data.product.barcode,product_name:data.product.name,brands:data.product.brand,image_front_url:data.product.url}},code);
+    if(!p)throw new Error("The catalog returned an invalid or unlicensed product photo.");
+    barcodeCandidate=p;
+  }catch(e){if(id!==photoPickId||token!==barcodeToken)return;barcodeError=String(e.message||"Barcode lookup failed.").slice(0,160)}
+  barcodeLoading=false;render();const match=$("#barcode-match-anchor");if(match)match.scrollIntoView({block:"nearest"});
+}
 function viewPhotoPicker(){
   if(!photoPickId)return "";
   const i=items().find(x=>x[0]===photoPickId);if(!i)return "";
@@ -380,6 +402,11 @@ function viewPhotoPicker(){
     <p class="small muted">Photos come from Wikimedia Commons. Generic food photographs may not match the exact brand or package. Review the picture before selecting it; licensing details are linked below each result. Searching shares the product name with Wikimedia.</p>
     <form data-form="photosearch" class="row"><label class="f" for="photo-search">Search photographs<input id="photo-search" maxlength="80" value="${esc(photoSearchTerm)}"></label><button class="btn" type="submit">Search</button></form>
     <div class="photo-choice-grid" id="photo-options" aria-live="polite">${photoCandidateList()}</div>
+    <details class="barcode-lookup" ${barcodeCandidate||barcodeError||barcodeLoading?"open":""}><summary>Find the exact package using its barcode</summary>
+    <p class="small muted">This searches Open Food Facts only when you ask. A barcode identifies a specific product; photographs may be missing or outdated. No price or availability claims are made.</p>
+    <form class="row" data-form="barcodelookup"><label class="f" for="product-barcode">Product barcode<input id="product-barcode" type="text" inputmode="numeric" pattern="[0-9\\s-]{8,22}" autocomplete="off" placeholder="Scan or type the digits" maxlength="22"></label><button class="btn" type="submit">Find package</button></form>
+    <div id="barcode-match-anchor" aria-live="polite">${barcodePreview()}</div>
+    </details>
     <div class="row"><label class="f" for="photo-url">Or paste a direct HTTPS image link<input id="photo-url" type="url" maxlength="1500" placeholder="https://…/photo.jpg"></label><button class="chip" type="button" data-act="photourl">Use my link</button><button class="chip" type="button" data-act="photoclear">Reset to automatic photo</button></div>
   </section>`;
 }
@@ -394,7 +421,7 @@ async function runPhotoSearch(term){
   }catch(e){if(id!==photoPickId||token!==photoSearchToken)return;photoSearchError="Photo search unavailable. Please check your connection or use a direct link."}
   const box=$("#photo-options");if(box)box.innerHTML=photoCandidateList();
 }
-function closePhotoPicker(){photoSearchToken++;photoPickId=null;photoChoices=[];photoSearchError="";render()}
+function closePhotoPicker(){photoSearchToken++;barcodeToken++;photoPickId=null;photoChoices=[];photoSearchError="";barcodeCandidate=null;barcodeLoading=false;barcodeError="";render()}
 function saveProductPhoto(photo){
   if(!photoPickId||!safeGroceryImageUrl(photo.url))return;
   S.settings.productImages=Object.assign({},S.settings.productImages,{[photoPickId]:photo});
@@ -795,11 +822,13 @@ main.addEventListener("click",e=>{
   if(a==="status"){const id=b.dataset.id,st=b.dataset.st;S.pinned[id]=1;const r=Object.assign({status:"",paid:null,store:""},(S.items[S.trip]||{})[id]);
     r.status=r.status===st?"":st;if(r.status!=="bought"){r.paid=null;r.store=""}putItem(S.trip,id,r);keepFocus(()=>render(),b.id||null,`[data-act=status][data-id="${id}"][data-st="${st}"]`)}
   else if(a==="choosephoto"){
+    barcodeToken++;barcodeCandidate=null;barcodeError="";barcodeLoading=false;
     photoPickId=b.dataset.id;photoSearchTerm=PWPH.queryFor(b.dataset.id,(items().find(i=>i[0]===b.dataset.id)||[])[2]);photoChoices=[];photoSearchError="";
     render();const picker=$("#photo-picker");if(picker)picker.scrollIntoView({block:"start"});runPhotoSearch(photoSearchTerm)
   }
   else if(a==="photoclose"){closePhotoPicker()}
   else if(a==="photoselect"){const picked=photoChoices[Number(b.dataset.index)];if(picked)saveProductPhoto(picked)}
+  else if(a==="barcodeapply"){if(barcodeCandidate)saveProductPhoto(barcodeCandidate)}
   else if(a==="photourl"){const url=safeGroceryImageUrl($("#photo-url")?.value.trim()||"");if(!url){toast("Please enter a valid HTTPS photo URL");return}
     saveProductPhoto({url,title:"Your linked photo",source:"",license:"User-supplied image",kind:"custom"})}
   else if(a==="photoclear"){if(!photoPickId)return;const copy=Object.assign({},S.settings.productImages);delete copy[photoPickId];S.settings.productImages=copy;
@@ -874,6 +903,7 @@ main.addEventListener("change",e=>{
 main.addEventListener("submit",e=>{
   const fm=e.target.dataset.form;
   if(fm==="photosearch"){e.preventDefault();runPhotoSearch($("#photo-search").value);return}
+  if(fm==="barcodelookup"){e.preventDefault();lookupBarcode($("#product-barcode").value);return}
   if(fm==="additem"){e.preventDefault();const name=$("#ni-name").value.trim();if(!name)return;
     const c={id:"u-"+Date.now().toString(36),name:name.slice(0,80),buy:$("#ni-buy").value.trim().slice(0,40),price:num($("#ni-price").value)||0,store:$("#ni-store").value,imageUrl:safeGroceryImageUrl($("#ni-image").value.trim())};
     S.settings.customItems=(S.settings.customItems||[]).concat([c]);putSettings();toast("Added to your list");render();return}

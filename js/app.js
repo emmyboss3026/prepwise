@@ -690,11 +690,11 @@ function viewEdit(){
    <p class="small"><b>Nutrition per serving</b> — optional. Enter measured/verified values, or leave blank; text is never treated as a calorie source.</p>
    <label class="f" for="e-total-kcal">Optional: known calories for entire batch<input id="e-total-kcal" type="number" data-act="batchcalories" inputmode="decimal" min="0" step="1" placeholder="e.g. 1600 — divides by portions"></label>
    <div class="grid3">
-    <label class="f" for="e-kcal">kcal<input type="text" inputmode="decimal" id="e-kcal" value="${esc(r.kcal)}"></label>
-    <label class="f" for="e-p">Protein g<input type="text" inputmode="decimal" id="e-p" value="${esc(r.p)}"></label>
-    <label class="f" for="e-c">Carbs g<input type="text" inputmode="decimal" id="e-c" value="${esc(r.c)}"></label>
-    <label class="f" for="e-f">Fat g<input type="text" inputmode="decimal" id="e-f" value="${esc(r.f)}"></label>
-    <label class="f" for="e-fib">Fibre g<input type="text" inputmode="decimal" id="e-fib" value="${esc(r.fib)}"></label>
+    <label class="f" for="e-kcal">kcal<input type="text" inputmode="decimal" id="e-kcal" value="${id==="__new"&&S.recipeStudioDraft?"":esc(r.kcal)}"></label>
+    <label class="f" for="e-p">Protein g<input type="text" inputmode="decimal" id="e-p" value="${id==="__new"&&S.recipeStudioDraft?"":esc(r.p)}"></label>
+    <label class="f" for="e-c">Carbs g<input type="text" inputmode="decimal" id="e-c" value="${id==="__new"&&S.recipeStudioDraft?"":esc(r.c)}"></label>
+    <label class="f" for="e-f">Fat g<input type="text" inputmode="decimal" id="e-f" value="${id==="__new"&&S.recipeStudioDraft?"":esc(r.f)}"></label>
+    <label class="f" for="e-fib">Fibre g<input type="text" inputmode="decimal" id="e-fib" value="${id==="__new"&&S.recipeStudioDraft?"":esc(r.fib)}"></label>
    </div>
    <label class="f" for="e-oven">Oven & hob, one per line as “Label | setting”<textarea id="e-oven" placeholder="Oven | 190 °C fan">${esc(linesOf(r.oven,true))}</textarea></label>
    <label class="f" for="e-ing">Ingredients, one per line as “Amount | ingredient”<textarea id="e-ing" style="min-height:12rem" placeholder="800 g | Chicken breast">${esc(linesOf(r.ingredients,true))}</textarea></label>

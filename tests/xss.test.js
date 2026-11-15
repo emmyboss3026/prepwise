@@ -28,7 +28,7 @@ function boot(storedJson) {
     localStorage: { getItem: k => (k in store ? store[k] : null), setItem: (k, v) => { store[k] = String(v); }, get length() { return 0; }, key: () => null },
     matchMedia: () => ({ matches: false, addEventListener() {} }),
     setTimeout: () => 0, clearInterval() {}, setInterval: () => 0, addEventListener() {}, scrollTo() {},
-    navigator: {}, location: { origin: "http://x", pathname: "/" }, URL: { revokeObjectURL() {}, createObjectURL: () => "blob:x" }, CSS: { escape: s => s }
+    navigator: {}, location: { origin: "http://x", pathname: "/" }, URL: Object.assign(class extends URL {}, { revokeObjectURL() {}, createObjectURL: () => "blob:x" }), CSS: { escape: s => s }
   };
   ctx.window = ctx; ctx.self = ctx;
   vm.createContext(ctx);
@@ -47,7 +47,7 @@ function hostileState(td) {
       displayName: P, extraKcal: Q, sex: R, age: P, height: Q, weight: R, goal: P, activity: Q,
       plan: { breakfast: Q, lunch: R },
       recipes: { evil: evilRecipe(P), [Q]: evilRecipe(R), Pancakes: { name: P, servingLabel: Q } },
-      customItems: [{ id: Q, name: P, buy: R, price: P, store: Q }, { id: R, name: Q, buy: P, price: R, store: "NOPE" + P }],
+      customItems: [{ id: Q, name: P, buy: R, price: P, store: Q, imageUrl: "javascript:alert(1)" }, { id: R, name: Q, buy: P, price: R, store: "NOPE" + P, imageUrl: "https://example.com/a.png" + P }, { id: "u3", name: "Tea", buy: "1", price: 1, store: "LIDL", imageUrl: "https://user:pw@example.com/x.png" }, { id: "u4", name: "Rice", buy: "1", price: 1, store: "LIDL", imageUrl: "https://example.com/a.png" + P }],
       hiddenItems: [P], tripBudgets: { [td]: P, [P]: Q, x: R },
       priceLog: [
         { id: R, item: Q, name: P, store: R, total: 1, amount: Q, base: 1, unit: "kg", price: 1, date: td, cur: "EUR", promo: 0 },
@@ -223,4 +223,24 @@ test("photo file name and object URL are escaped in the preview markup", () => {
   assert.ok(html.includes("&lt;b id=PWNA&gt;"));
   vm.runInContext("clearPricePhoto()", ctx);
   assert.equal(String(ctx.pricePhotoMarkup()), "");
+});
+
+/* ---------- Grocery thumbnails (#10) ---------- */
+test("custom image URLs: only clean https URLs are ever rendered", () => {
+  const ctx = boot("{}");
+  const f = ctx.safeGroceryImageUrl;
+  assert.equal(f("https://example.com/a.png"), "https://example.com/a.png");
+  for (const bad of ["javascript:alert(1)", "http://example.com/a.png", "data:image/png;base64,AAAA", "https://user:pw@example.com/x.png", "ftp://x/y", "//example.com/a.png", "not a url", "", null, 5, "https://" + "a".repeat(600) + ".com/x.png"])
+    assert.equal(f(bad), "", String(bad));
+});
+test("thumbnail markup: hostile image URLs fall back to the illustration, valid ones are escaped", () => {
+  const td = today(), ctx = boot("{}"), S = vm.runInContext("S", ctx);
+  S.trip = td; S.editList = false; S.shopFilter = "all";
+  S.settings.customItems = hostileState(td).settings.customItems;
+  const html = String(ctx.viewShop());
+  const srcs = [...html.matchAll(/<img src="([^"]*)"/g)].map(m => m[1]);
+  assert.ok(srcs.length >= 1, "at least one custom image rendered");
+  srcs.forEach(s => assert.match(s, /^https:\/\//, s));
+  assert.ok(!html.includes("javascript:"), "javascript: URL must not reach the page");
+  assert.ok(html.includes("grocery-thumb-fallback"), "built-in items get an illustration");
 });

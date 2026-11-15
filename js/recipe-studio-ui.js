@@ -15,7 +15,7 @@ function viewRecipeStudio(){
     <form data-form="studiobuild" class="studio-form">
       <label class="f" for="studio-title">Recipe name (optional)<input id="studio-title" type="text" maxlength="80" value="${esc(v.name||"")}" placeholder="e.g. Creamy chicken &amp; rice"></label>
       <div class="grid2"><label class="f" for="studio-slot">Menu section<select id="studio-slot">${["breakfast","lunch","dinner","snack"].map(x=>`<option value="${x}" ${slot===x?"selected":""}>${x[0].toUpperCase()+x.slice(1)}</option>`).join("")}</select></label>
-      <label class="f" for="studio-serves">Portions<input id="studio-serves" type="number" min="1" max="200" value="${esc(v.serves||4)}"></label></div>
+      <label class="f" for="studio-serves">Portions<input id="studio-serves" type="number" min="1" max="200" value="${esc(v.serves||"")}" placeholder="4 (default)"></label></div>
       <label class="f" for="studio-text">Your idea, ingredients, recipe caption or written transcript<textarea id="studio-text" rows="12" maxlength="14000" required placeholder="Title: Lemon garlic chicken\nServings: 4\nIngredients:\n500 g | Chicken breast\n2 tbsp | Olive oil\nSteps:\n1. Season the chicken.\n2. Cook fully and serve.">${esc(v.text||"")}</textarea></label>
       <div class="studio-help"><strong>Works best with:</strong> an Ingredients heading, amounts like “500 g chicken”, a Steps heading, and any cooking times. A one-sentence idea becomes a draft with blank details for you to complete.</div>
       <label class="f" for="studio-source">Video or recipe link (optional, saved with recipe)<input id="studio-source" type="url" maxlength="1000" value="${esc(v.sourceUrl||"")}" placeholder="https://www.youtube.com/watch?v=..."></label>

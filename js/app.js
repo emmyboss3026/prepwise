@@ -296,9 +296,13 @@ const GROCERY_ART=[
   [/oil|mayo|sauce|sriracha|worc|chilli|spice|salt/i,"🫙"],
   [/chocolate|cocoa/i,"🍫"],[/nut|cashew|almond/i,"🥜"]
 ];
+function safeGroceryImageUrl(raw){
+  if(typeof raw!=="string"||raw.length>500)return "";
+  try{const u=new URL(raw);return u.protocol==="https:"&&!!u.hostname&&!u.username&&!u.password?u.href:""}catch(e){return ""}
+}
 function groceryThumb(i){
   const c=(S.settings.customItems||[]).find(x=>x.id===i[0]);
-  const url=c&&typeof c.imageUrl==="string"&&/^https:\/\/[^\\s<>"']+$/i.test(c.imageUrl)?c.imageUrl:"";
+  const url=c&&typeof c.imageUrl==="string"?safeGroceryImageUrl(c.imageUrl):"";
   if(url)return `<span class="grocery-thumb"><img src="${esc(url)}" alt="" loading="lazy" referrerpolicy="no-referrer" ><span class="grocery-thumb-fallback" aria-hidden="true">🛒</span></span>`;
   const match=GROCERY_ART.find(([pattern])=>pattern.test(i[2]));
   return `<span class="grocery-thumb" aria-hidden="true"><span class="grocery-thumb-fallback">${match?match[1]:"🛒"}</span></span>`;
@@ -345,7 +349,8 @@ function viewShop(){
         <label class="f" for="ni-name">Item<input type="text" id="ni-name" required maxlength="80" placeholder="e.g. Greek yogurt 1 kg"></label>
         <label class="f" for="ni-buy">How much to buy<input type="text" id="ni-buy" maxlength="40" placeholder="e.g. 2 tubs"></label>
         <label class="f" for="ni-price">Expected price, €<input type="text" inputmode="decimal" id="ni-price" placeholder="e.g. 2,49"></label>
-        <label class="f" for="ni-image">Product image URL (optional)<input type="url" id="ni-image" maxlength="500" placeholder="https://example.com/product.jpg"></label>\n        <label class="f" for="ni-store">Store<select id="ni-store">${STORE_OPTS.map(([v,l])=>`<option value="${v}">${l}</option>`).join("")}</select></label>
+        <label class="f" for="ni-image">Product image URL (optional)<input type="url" id="ni-image" maxlength="500" placeholder="https://example.com/product.jpg"></label>
+        <label class="f" for="ni-store">Store<select id="ni-store">${STORE_OPTS.map(([v,l])=>`<option value="${v}">${l}</option>`).join("")}</select></label>
         <div class="row"><button class="btn" type="submit">Add to list</button></div>
       </form>
       ${(S.settings.hiddenItems||[]).length?`<p class="small muted">${S.settings.hiddenItems.length} of my default items are hidden. <button class="chip" type="button" data-act="unhide">Show them again</button></p>`:""}</section>`;
@@ -623,7 +628,7 @@ main.addEventListener("change",e=>{
 main.addEventListener("submit",e=>{
   const fm=e.target.dataset.form;
   if(fm==="additem"){e.preventDefault();const name=$("#ni-name").value.trim();if(!name)return;
-    const c={id:"u-"+Date.now().toString(36),name:name.slice(0,80),buy:$("#ni-buy").value.trim().slice(0,40),price:num($("#ni-price").value)||0,store:$("#ni-store").value,imageUrl:(()=>{const u=$("#ni-image").value.trim();return /^https:\/\/[^\\s<>"\x27]+$/i.test(u)?u.slice(0,500):""})()};
+    const c={id:"u-"+Date.now().toString(36),name:name.slice(0,80),buy:$("#ni-buy").value.trim().slice(0,40),price:num($("#ni-price").value)||0,store:$("#ni-store").value,imageUrl:safeGroceryImageUrl($("#ni-image").value.trim())};
     S.settings.customItems=(S.settings.customItems||[]).concat([c]);putSettings();toast("Added to your list");render();return}
   if(fm==="recipe"){e.preventDefault();saveRecipe();return}
   if(fm!=="weight")return;e.preventDefault();

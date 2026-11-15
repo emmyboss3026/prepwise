@@ -32,7 +32,7 @@ function boot(storedJson) {
   };
   ctx.window = ctx; ctx.self = ctx;
   vm.createContext(ctx);
-  for (const f of ["recipes.js", "js/core.js", "js/prices.js", "js/recs.js", "js/photos.js", "js/app.js"]) vm.runInContext(read(f), ctx, { filename: f });
+  for (const f of ["recipes.js", "js/core.js", "js/prices.js", "js/recs.js", "js/photos.js", "js/barcode.js", "js/app.js"]) vm.runInContext(read(f), ctx, { filename: f });
   return ctx;
 }
 

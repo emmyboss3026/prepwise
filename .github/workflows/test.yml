@@ -3,13 +3,15 @@ on:
   pull_request:
     paths:
       - "js/**"
+      - "api/**"
       - "tests/**"
       - "index.html"
       - "styles.css"
       - ".github/workflows/test.yml"
   push:
     branches:
-      - feat/product-visual-thumbnails
+      - main
+      - feat/verified-product-barcode-photos
 jobs:
   unit-and-static:
     runs-on: ubuntu-latest
@@ -25,5 +27,7 @@ jobs:
           node --check js/core.js
           node --check js/app.js
           node --check js/photos.js
+          node --check js/barcode.js
+          node --check api/product.js
       - name: Unit, security and structural tests
         run: node --test tests/*.test.js

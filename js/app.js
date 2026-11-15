@@ -379,7 +379,7 @@ function viewPhotoPicker(){
   const i=items().find(x=>x[0]===photoPickId);if(!i)return "";
   return `<section class="card" id="photo-picker" aria-label="Choose a real product photo"><div class="row between photo-picker-heading"><div><span class="eyebrow">Photo studio · Match your groceries</span><h3>Choose a picture for your product</h3><p class="photo-picker-exact-name">${esc(i[2])}</p></div><button class="chip" type="button" data-act="photoclose">Close</button></div>
     <p class="small muted">Photos come from Wikimedia Commons. Generic food photographs may not match the exact brand or package. Review the picture before selecting it; licensing details are linked below each result. Searching shares the product name with Wikimedia.</p>
-    <form data-form="photosearch" class="row"><label class="f" for="photo-search">Search photographs<input id="photo-search" maxlength="80" value="${esc(photoSearchTerm)}"></label><button class="btn" type="submit">Search</button></form>
+    <form data-form="photosearch" class="row"><label class="f" for="photo-search">Search photographs<input id="photo-search" type="text" maxlength="80" value="${esc(photoSearchTerm)}" placeholder="e.g. chicken breast, basmati rice"></label><button class="btn" type="submit">Search</button></form>
     <div class="photo-choice-grid" id="photo-options" aria-live="polite">${photoCandidateList()}</div>
     <div class="row"><label class="f" for="photo-url">Or paste a direct HTTPS image link<input id="photo-url" type="url" maxlength="1500" placeholder="https://…/photo.jpg"></label><button class="chip" type="button" data-act="photourl">Use my link</button><button class="chip" type="button" data-act="photoclear">Reset to automatic photo</button></div>
   </section>`;
@@ -535,7 +535,7 @@ function viewRecs(){
 
 function viewShop(){
   const t=tripTotals(S.trip);const cur=tripOf(today());const all=items();const ed=S.editList;
-  let html=`<section class="row between shop-pagehead"><div><span class="eyebrow">Your shopping studio</span><h2>Grocery list</h2><p class="muted small">${ed?"Editing your list":"Everything you need for this two-week prep"}</p></div>
+  let html=`<section class="row between shop-pagehead"><div><span class="eyebrow">Your shopping studio</span><h2>Grocery list</h2><p class="muted small">${ed?"Editing your list":"Everything you need for this two-week prep"}</p><a class="shop-jump" href="#shop-items">Browse your products ↓</a></div>
     <label class="f" for="tripsel">Shopping trip<select id="tripsel" data-act="trip">${tripOptions(S.trip)}</select></label></section>
   <section class="stats" aria-label="Trip totals">
     <div class="stat"><b>${eur(t.planned)}</b><span>Planned</span></div>
@@ -568,6 +568,7 @@ function viewShop(){
   if(!ed&&photoPickId)html+=viewPhotoPicker();
   const visible=ed?all:all.filter(i=>{const status=(S.items[S.trip]||{})[i[0]]?.status;return S.shopFilter==="all"||S.pinned[i[0]]||(S.shopFilter==="bought"?status==="bought":!status)}); // pinned: a row you just tapped stays put so you can enter its price
   if(!ed&&!visible.length)html+=`<section class="card"><p class="muted">No items in this view. Choose All to see your full list.</p></section>`;
+  html+=`<div id="shop-items" class="shop-items-anchor" aria-hidden="true"></div>`;
   const rowFor=(i,extra)=>ed?`<li class="item"><span><span class="name">${esc(i[2])}</span><span class="meta">${esc(i[3])} · ${eur(i[4])}</span></span><span class="price"><button class="chip" type="button" data-act="rmitem" data-id="${esc(i[0])}" aria-label="Remove ${esc(i[2])}">Remove</button></span></li>`:itemRow(i,extra);
   if(S.group==="store"){
     for(const s of Object.keys(STORES)){

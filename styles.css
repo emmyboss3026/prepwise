@@ -350,3 +350,10 @@ dialog::backdrop{background:rgb(10 20 14 / .5)}
 #photo-picker>.row:last-child label{flex:1 1 200px}
 @media(max-width:520px){.grocery-product{gap:9px}.grocery-thumb{width:58px;height:58px;flex-basis:58px;border-radius:12px}.photo-choice-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:359px){.grocery-thumb{width:50px;height:50px;flex-basis:50px}}
+
+/* Optional local-only photo preview in price history */
+.price-photo-box{grid-column:1/-1;min-width:0;padding:12px;border:1px dashed var(--line2);border-radius:var(--r);background:var(--surface2)}
+.price-photo-box input[type=file]{max-width:100%;width:100%;font:inherit}
+.price-photo-box figure{margin:10px 0;display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap}
+.price-photo-preview{width:min(100%,240px);height:180px;object-fit:contain;background:var(--surface);border:1px solid var(--line);border-radius:12px}
+.price-photo-box figcaption{overflow-wrap:anywhere;max-width:100%}

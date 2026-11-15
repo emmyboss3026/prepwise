@@ -91,9 +91,9 @@ const DINNERS=["Cajun","Cajun","Alfredo","Alfredo","Middle Eastern","Middle East
 const STORE_OPTS=[["SPAR","SPAR / INTERSPAR"],["HOFER","HOFER"],["BILLA","BILLA"],["LIDL","Lidl"],["OTHER","Other store"],["PANTRY","Pantry"]];
 const ACTIVITY=[["1.2","Mostly sitting"],["1.375","Light (1–3 workouts/week)"],["1.55","Moderate (3–5/week)"],["1.725","Hard (6–7/week)"],["1.9","Very hard or physical job"]];
 
-function items(){
+function items(trip=S.trip){
   const st=S.settings||{};const hid=st.hiddenItems||[];
-  const own=(st.customItems||[]).map(c=>[c.id,c.store||"OTHER",c.name,c.buy||"",num(c.price)||0,"mine",{}]);
+  const own=(st.customItems||[]).filter(c=>!c.trip||c.trip===trip).map(c=>[c.id,c.store||"OTHER",c.name,c.buy||"",num(c.price)||0,"mine",{}]);
   return ITEMS.filter(i=>!hid.includes(i[0])).concat(own);
 }
 /* ---------- Helpers ---------- */
@@ -116,6 +116,9 @@ syncTheme();
 
 /* ---------- State & storage ---------- */
 const S={tab:"home",group:"store",shopFilter:"remaining",pinned:{},trip:tripOf(today()),logTrip:tripOf(today()),items:{},settings:{},log:{},weights:{},user:null,cloud:false,loading:false};
+S.recipeStudio=false;S.recipeStudioDraft=null;S.shoppingRecipe=null;
+let studioVideoUrl="",studioVideoName="";
+function clearStudioVideo(){if(studioVideoUrl)URL.revokeObjectURL(studioVideoUrl);studioVideoUrl="";studioVideoName=""}
 let sb=null;
 try{if(window.supabase)sb=window.supabase.createClient(SB_URL,SB_KEY)}catch(e){sb=null}
 
@@ -160,7 +163,7 @@ async function clearTrip(trip){
 }
 
 /* ---------- Calculations ---------- */
-function tripTotals(trip){return PW.tripTotals(items(),S.items[trip])}
+function tripTotals(trip){return PW.tripTotals(items(trip),S.items[trip])}
 function dinnerFor(day){const n=((diffDays(ANCHOR,day)%14)+14)%14;const r=R();const d=DINNERS[n%8];if(r[d]&&r[d].slot==="dinner")return d;const ds=bySlot("dinner");return ds.length?ds[n%ds.length].id:null}
 function defSlot(sl){const p=(S.settings.plan||{})[sl];const r=R();if(p&&r[p])return p;const def=sl==="breakfast"?"Burritos":"Pancakes";if(r[def]&&r[def].slot===sl)return def;const l=bySlot(sl);return l.length?l[0].id:null}
 function plannedDay(){
@@ -197,7 +200,7 @@ function render(opt){
   if(S.tab==="shop")mountGroceryPhotos();
 }
 /* Switch section: render with a staggered entrance, reset scroll, move focus to the content for screen readers. */
-function go(tab,pre){if(tab!==S.tab){S.pinned={};clearPricePhoto()}S.tab=tab;if(pre)pre();render({enter:true});window.scrollTo(0,0);main.focus({preventScroll:true})}
+function go(tab,pre){if(tab!==S.tab){S.pinned={};clearPricePhoto();if(tab!=="cooking"){clearStudioVideo();S.recipeStudio=false;S.shoppingRecipe=null}}S.tab=tab;if(pre)pre();render({enter:true});window.scrollTo(0,0);main.focus({preventScroll:true})}
 
 /* ---------- Home dashboard ---------- */
 const SLOT_RANK={breakfast:0,lunch:1,dinner:2,snack:3};
@@ -220,7 +223,7 @@ function viewHome(){
   if(S.loading)return skeletonHome();
   const td=today(),cur=tripOf(td),next=PW.nextCookDay(td),left=diffDays(td,next),rs=R();
   const nm=S.settings.displayName||(S.user&&S.user.email?S.user.email.split("@")[0]:"");
-  const t=tripTotals(cur),all=items(),eaten=dayEaten(td),pd=plannedDay();
+  const t=tripTotals(cur),all=items(cur),eaten=dayEaten(td),pd=plannedDay();
   const nextTxt=left===0?"Today":left===1?"Tomorrow":"In "+left+" days";
   const toBuy=all.filter(i=>i[1]!=="PANTRY"&&!((S.items[cur]||{})[i[0]]||{}).status).length;
 
@@ -404,12 +407,14 @@ function saveProductPhoto(photo){
 
 function itemRow(i,extra){
   const [id,,name,buy,price,src]=i;const r=(S.items[S.trip]||{})[id]||{};const st=r.status==="have"||r.status==="bought"?r.status:"";
-  const right=st==="bought"&&r.paid!=null?`${eur(r.paid)}<small>you paid</small>`:st==="have"?`${eur(price)}<small>at home</small>`:`${eur(price)}<small>${src==="est"?"est.":"store price"}</small>`;
+  const unknownPrice=src==="mine"&&!(Number(price)>0);
+  const right=st!=="bought"&&unknownPrice?'Price TBD<small>Estimate not set</small>':st==="bought"&&r.paid!=null?`${eur(r.paid)}<small>you paid</small>`:st==="have"?`${eur(price)}<small>at home</small>`:`${eur(price)}<small>${src==="est"?"est.":"store price"}</small>`;
   const diff=st==="bought"&&r.paid!=null?(price-r.paid>=0?`<span class="diff save">${eur(price-r.paid)} under my price</span>`:`<span class="diff more">${eur(r.paid-price)} over my price</span>`):"";
   const tag=src==="offer"?'<span class="tag offer">Offer to 18 Nov</span>':"";
   return `<li class="item${st?" is-"+st:""}">
     <span class="grocery-product">${groceryThumb(i)}<span class="grocery-product-info"><span class="grocery-product-eyebrow">Product to buy</span><span class="name" id="grocery-name-${esc(id)}" title="${esc(name)}">${esc(name)}</span><span class="meta">${extra}</span>${tag}</span></span>
     <span class="price">${right}</span>
+    ${unknownPrice&&st!=="bought"?`<label class="f grocery-estimate" for="estimate-${esc(id)}">Estimated price, €<input id="estimate-${esc(id)}" type="text" inputmode="decimal" data-act="estimate" data-id="${esc(id)}" placeholder="e.g. 3,49" aria-label="Estimated price for ${esc(name)}"></label>`:""}
     <span class="acts">
       <button type="button" class="chip have" data-act="status" data-id="${esc(id)}" data-st="have" aria-pressed="${st==="have"}">I have it</button>
       <button type="button" class="chip" data-act="status" data-id="${esc(id)}" data-st="bought" aria-pressed="${st==="bought"}">Bought</button>
@@ -424,8 +429,9 @@ function itemRow(i,extra){
 function budgetCard(t){
   const budget=PW.parseBudget((S.settings.tripBudgets||{})[S.trip]).value;
   const b=PW.budgetStatus(t.spent,t.left,budget);
+  const unknown=items().filter(i=>i[5]==="mine"&&!(Number(i[4])>0)&&!(S.items[S.trip]||{})[i[0]]?.status).length;
   return `<section class="card" aria-label="Shopping budget"><div class="row between"><h3>Trip budget</h3><label class="f" for="trip-budget">Budget (€)<input type="text" id="trip-budget" inputmode="decimal" data-act="tripbudget" value="${budget==null?"":esc(String(budget).replace(".",","))}" placeholder="Set budget" style="max-width:130px"></label></div>
-    <p class="muted small">Estimated checkout: ${eur(b.total)} · ${eur(t.spent)} purchased · ${eur(t.left)} still to buy. Pantry items are not counted.</p>
+    <p class="muted small">Estimated checkout: ${eur(b.total)} · ${eur(t.spent)} purchased · ${eur(t.left)} still to buy. Pantry items are not counted.</p>${unknown?`<p class="small" role="note"><b>${unknown} unpriced item${unknown===1?"":"s"}:</b> budget forecast excludes their costs until you enter estimates.</p>`:""}
     ${budget==null?"":`<p class="small" aria-live="polite"><strong>${b.over?eur(-b.diff)+" over budget":eur(b.diff)+" under budget"}</strong> based on the estimated total. Enter actual prices for more accuracy.</p><div class="bar${b.over?" offer":""}" role="img" aria-label="Estimated spending ${eur(b.total)} of ${eur(budget)} budget"><i style="--v:${Math.min(100,budget?b.total/budget*100:100).toFixed(1)}"></i></div>`}</section>`;
 }
 /* ---------- Price history (2.4) ---------- */
@@ -636,21 +642,23 @@ function setCk(id,v){try{localStorage.setItem(ckKey(id),JSON.stringify(v))}catch
 function viewCooking(){
   const rs=R();
   if(S.editRecipe)return viewEdit();
+  if(S.recipeStudio)return viewRecipeStudio();
   if(S.recipe&&rs[S.recipe])return viewRecipe(rs[S.recipe]);
   let html=`<section><h2>Cooking Time</h2><p class="muted small">Step-by-step guides with amounts, oven settings, timers and portions. Every meal can be edited, and you can add your own.</p></section>`;
   ["breakfast","lunch","dinner","snack"].forEach(sl=>{
     const list=Object.values(rs).filter(r=>r.slot===sl);if(!list.length)return;
     html+=`<section class="group"><div class="ghead"><h3>${sl[0].toUpperCase()+sl.slice(1)}</h3><span class="gtot">${list.length} guide${list.length===1?"":"s"}</span></div>`;
-    list.forEach(r=>{html+=`<button type="button" class="card rcard" data-act="open" data-id="${esc(r.id)}" data-slot="${esc(r.slot)}"><span class="tile">${slotIc(r.slot)}</span><span style="min-width:0"><span class="rt">${esc(r.name)}</span><span class="meta">${ic("clock")} ${esc(r.time||"No time set")} · makes ${esc(r.serves)} × ${esc(r.servingLabel||"serving")}</span>${macroShare(r)}${r.edited?'<span class="tag">Edited</span>':""}${!r.builtin?'<span class="tag">Your meal</span>':""}</span><span class="kc">${Math.round(num(r.kcal)||0)}<small>kcal each</small><em>${r1(num(r.p)||0)} g protein</em></span></button>`});
+    list.forEach(r=>{html+=`<button type="button" class="card rcard" data-act="open" data-id="${esc(r.id)}" data-slot="${esc(r.slot)}"><span class="tile">${slotIc(r.slot)}</span><span style="min-width:0"><span class="rt">${esc(r.name)}</span><span class="meta">${ic("clock")} ${esc(r.time||"No time set")} · makes ${esc(r.serves)} × ${esc(r.servingLabel||"serving")}</span>${macroShare(r)}${r.edited?'<span class="tag">Edited</span>':""}${!r.builtin?'<span class="tag">Your meal</span>':""}${r.draftIncomplete?'<span class="tag">Draft · add details</span>':""}</span><span class="kc">${r.nutritionUnverified?"—":Math.round(num(r.kcal)||0)}<small>${r.nutritionUnverified?"Nutrition pending":"kcal each"}</small>${!r.nutritionUnverified?`<em>${r1(num(r.p)||0)} g protein</em>`:""}</span></button>`});
     html+=`</section>`;
   });
+  html+=`<section class="studio-promo"><span class="eyebrow">New · Recipe Studio</span><div class="row between"><div><h3>Got a recipe idea or cooking video?</h3><p class="small">Turn your written idea, caption or transcript into an editable guide, then shop for it.</p></div><button class="btn" type="button" data-act="recipestudio">Open Recipe Studio →</button></div></section>`;
   html+=`<section class="row"><button class="btn" type="button" data-act="newrecipe">Add a meal</button>${Object.keys(S.settings.recipes||{}).some(k=>DEF[k]&&S.settings.recipes[k].deleted)?`<button class="btn ghost" type="button" data-act="restore">Restore deleted meals</button>`:""}</section>`;
   return html;
 }
 function viewRecipe(r){
   const f=S.scale||1,ck=getCk(r.id);
   let html=`<section class="row between"><button class="btn ghost" type="button" data-act="back">← All meals</button><button class="btn ghost" type="button" data-act="wake" aria-pressed="${!!S.wake}">${S.wake?"Screen stays on":"Keep screen on"}</button></section>
-  <section><h2>${esc(r.name)}</h2><p class="muted small">Makes ${esc(scaleAmt(String(r.serves),f))} × ${esc(r.servingLabel||"serving")} · ${esc(r.time||"")} · ${Math.round(num(r.kcal)||0)} kcal and ${r1(num(r.p)||0)} g protein each</p></section>
+  <section><h2>${esc(r.name)}</h2><p class="muted small">Makes ${esc(scaleAmt(String(r.serves),f))} × ${esc(r.servingLabel||"serving")} · ${esc(r.time||"")} · ${r.nutritionUnverified?"Nutrition not calculated":`${Math.round(num(r.kcal)||0)} kcal and ${r1(num(r.p)||0)} g protein each`}</p></section>
   <div class="seg" role="group" aria-label="Batch size">${SCALES.map(x=>`<button type="button" data-act="scale" data-f="${x}" aria-pressed="${f===x}">${x===0.5?"½":x===1.5?"1½":x}×</button>`).join("")}</div>`;
   if((r.oven||[]).length)html+=`<section class="card"><h3>Oven & hob</h3><div class="ovgrid">${r.oven.map(o=>`<div class="ov"><span>${esc(o[0])}</span><b>${esc(o[1])}</b></div>`).join("")}</div></section>`;
   html+=`<section class="card"><div class="row between"><h3>Ingredients${f!==1?` · ${f}× batch`:""}</h3><span class="muted small">Tick as you weigh</span></div><ul>${(r.ingredients||[]).map((g,i)=>`<li><label class="ing${ck["i"+i]?" done":""}" for="ig-${i}"><input type="checkbox" id="ig-${i}" data-act="ck" data-k="i${i}" ${ck["i"+i]?"checked":""}><span><span class="amt">${esc(scaleAmt(g[0],f))}</span>${esc(g[1])}</span></label></li>`).join("")}</ul></section>`;
@@ -658,16 +666,18 @@ function viewRecipe(r){
   if((r.portion||[]).length)html+=`<section class="card"><h3>Portioning</h3><ul>${r.portion.map(x=>`<li class="small" style="padding:4px 0">${esc(x)}</li>`).join("")}</ul><p class="muted small">Weigh each cooked component and divide by the number of servings for exact portions.</p></section>`;
   if((r.storage||[]).length)html+=`<section class="card"><h3>Storage & reheating</h3><ul>${r.storage.map(x=>`<li class="small" style="padding:4px 0">${esc(x)}</li>`).join("")}</ul></section>`;
   if(r.notes)html+=`<section class="note ok">${esc(r.notes)}</section>`;
-  html+=`<section class="row"><button class="btn" type="button" data-act="edit" data-id="${esc(r.id)}">Edit this meal</button><button class="btn ghost" type="button" data-act="clearck">Clear ticks</button>
+  if(r.sourceUrl&&PWRS.safeLink(r.sourceUrl))html+=`<section class="card"><h3>Original recipe source</h3><a href="${esc(PWRS.safeLink(r.sourceUrl))}" target="_blank" rel="noopener noreferrer">Open the original video or recipe ↗</a></section>`;
+  if(S.shoppingRecipe===r.id)html+=recipeShoppingCard(r);
+  html+=`<section class="row"><button class="btn" type="button" data-act="recipeshopopen">Add ingredients to shopping</button><button class="btn ghost" type="button" data-act="edit" data-id="${esc(r.id)}">Edit this meal</button><button class="btn ghost" type="button" data-act="clearck">Clear ticks</button>
     ${r.builtin&&r.edited?`<button class="btn ghost" type="button" data-act="revert" data-id="${esc(r.id)}">Back to my original</button>`:""}
     <button class="btn danger" type="button" data-act="delrecipe" data-id="${esc(r.id)}">Delete meal</button></section>`;
   return html;
 }
 function linesOf(arr,pair){return (arr||[]).map(x=>pair?(x[0]+" | "+x[1]):x).join("\n")}
 function viewEdit(){
-  const id=S.editRecipe,r=id==="__new"?{name:"",slot:"dinner",serves:4,servingLabel:"1 bowl",time:"",kcal:"",p:"",c:"",f:"",fib:"",oven:[],ingredients:[],steps:[],portion:[],storage:[],notes:""}:R()[id];
+  const id=S.editRecipe,r=id==="__new"?(S.recipeStudioDraft||{name:"",slot:"dinner",serves:4,servingLabel:"1 bowl",time:"",kcal:"",p:"",c:"",f:"",fib:"",oven:[],ingredients:[],steps:[],portion:[],storage:[],notes:""}):R()[id];
   if(!r){S.editRecipe=null;return viewCooking()}
-  return `<section class="row between"><h2>${id==="__new"?"Add a meal":"Edit meal"}</h2><button class="btn ghost" type="button" data-act="canceledit">Cancel</button></section>
+  return `${id==="__new"&&S.recipeStudioDraft?`<section class="note"><b>Review your draft before saving.</b><p class="small">No quantities, instructions or calories were invented. ${esc((S.recipeStudioDraft.missing||[]).join(" · "))}</p><p class="small">${PWRS.suggestions(S.recipeStudioDraft).map(esc).join(" · ")}</p></section>`:""}<section class="row between"><h2>${id==="__new"?"Add a meal":"Edit meal"}</h2><button class="btn ghost" type="button" data-act="canceledit">Cancel</button></section>
   <form class="card" data-form="recipe">
    <label class="f" for="e-name">Name<input type="text" id="e-name" required maxlength="80" value="${esc(r.name)}"></label>
    <div class="grid3">
@@ -675,14 +685,16 @@ function viewEdit(){
     <label class="f" for="e-serves">Servings<input type="number" id="e-serves" min="1" max="200" value="${esc(r.serves)}"></label>
     <label class="f" for="e-sl">One serving is<input type="text" id="e-sl" maxlength="40" value="${esc(r.servingLabel||"")}"></label>
    </div>
+   <label class="f" for="e-source">Original video/recipe link (optional)<input id="e-source" type="url" maxlength="1000" value="${esc(r.sourceUrl||"")}" placeholder="https://..."></label>
    <label class="f" for="e-time">Total time<input type="text" id="e-time" maxlength="60" value="${esc(r.time||"")}" placeholder="e.g. About 1 hour"></label>
-   <p class="small"><b>Nutrition per serving</b></p>
+   <p class="small"><b>Nutrition per serving</b> — optional. Enter measured/verified values, or leave blank; text is never treated as a calorie source.</p>
+   <label class="f" for="e-total-kcal">Optional: known calories for entire batch<input id="e-total-kcal" type="number" data-act="batchcalories" inputmode="decimal" min="0" step="1" placeholder="e.g. 1600 — divides by portions"></label>
    <div class="grid3">
-    <label class="f" for="e-kcal">kcal<input type="text" inputmode="decimal" id="e-kcal" value="${esc(r.kcal)}"></label>
-    <label class="f" for="e-p">Protein g<input type="text" inputmode="decimal" id="e-p" value="${esc(r.p)}"></label>
-    <label class="f" for="e-c">Carbs g<input type="text" inputmode="decimal" id="e-c" value="${esc(r.c)}"></label>
-    <label class="f" for="e-f">Fat g<input type="text" inputmode="decimal" id="e-f" value="${esc(r.f)}"></label>
-    <label class="f" for="e-fib">Fibre g<input type="text" inputmode="decimal" id="e-fib" value="${esc(r.fib)}"></label>
+    <label class="f" for="e-kcal">kcal<input type="text" inputmode="decimal" id="e-kcal" value="${id==="__new"&&S.recipeStudioDraft?"":esc(r.kcal)}"></label>
+    <label class="f" for="e-p">Protein g<input type="text" inputmode="decimal" id="e-p" value="${id==="__new"&&S.recipeStudioDraft?"":esc(r.p)}"></label>
+    <label class="f" for="e-c">Carbs g<input type="text" inputmode="decimal" id="e-c" value="${id==="__new"&&S.recipeStudioDraft?"":esc(r.c)}"></label>
+    <label class="f" for="e-f">Fat g<input type="text" inputmode="decimal" id="e-f" value="${id==="__new"&&S.recipeStudioDraft?"":esc(r.f)}"></label>
+    <label class="f" for="e-fib">Fibre g<input type="text" inputmode="decimal" id="e-fib" value="${id==="__new"&&S.recipeStudioDraft?"":esc(r.fib)}"></label>
    </div>
    <label class="f" for="e-oven">Oven & hob, one per line as “Label | setting”<textarea id="e-oven" placeholder="Oven | 190 °C fan">${esc(linesOf(r.oven,true))}</textarea></label>
    <label class="f" for="e-ing">Ingredients, one per line as “Amount | ingredient”<textarea id="e-ing" style="min-height:12rem" placeholder="800 g | Chicken breast">${esc(linesOf(r.ingredients,true))}</textarea></label>
@@ -830,7 +842,7 @@ main.addEventListener("click",e=>{
   else if(a==="pricedel"){if(b.dataset.confirm){savePriceLog(PWP.removeObs(priceLog(),b.dataset.id));toast("Deleted from price history");render()}else{b.dataset.confirm="1";b.textContent="Tap again"}}
   else if(a==="editlist"){S.editList=!S.editList;render()}
   else if(a==="rmitem"){const id=b.dataset.id;const st=S.settings;
-    if(ITEMS.some(i=>i[0]===id)){st.hiddenItems=(st.hiddenItems||[]).concat([id])}else{st.customItems=(st.customItems||[]).filter(c=>c.id!==id)}
+    if(ITEMS.some(i=>i[0]===id)){st.hiddenItems=(st.hiddenItems||[]).concat([id])}else{st.customItems=(st.customItems||[]).filter(c=>c.id!==id||(c.trip&&c.trip!==S.trip))}
     putSettings();toast("Removed from your list");render()}
   else if(a==="unhide"){S.settings.hiddenItems=[];putSettings();render()}
   else if(a==="open"||a==="gocook"){const id=b.dataset.id;go("cooking",()=>{S.recipe=id;S.scale=1;S.editRecipe=null})}
@@ -842,8 +854,13 @@ main.addEventListener("click",e=>{
   else if(a==="timer")startTimer(parseFloat(b.dataset.min),b.dataset.label);
   else if(a==="clearck"){setCk(S.recipe,{});render()}
   else if(a==="edit"){S.editRecipe=b.dataset.id;render();window.scrollTo(0,0)}
-  else if(a==="newrecipe"){S.editRecipe="__new";render();window.scrollTo(0,0)}
-  else if(a==="canceledit"){S.editRecipe=null;render();window.scrollTo(0,0)}
+  else if(a==="recipestudio"){S.recipe=null;S.editRecipe=null;S.shoppingRecipe=null;S.recipeStudio=true;S.recipeStudioInput=S.recipeStudioInput||{};render();window.scrollTo(0,0)}
+  else if(a==="studioexit"){clearStudioVideo();S.recipeStudio=false;S.recipeStudioDraft=null;S.recipeStudioInput=null;render()}
+  else if(a==="studiovideoclear"){clearStudioVideo();const input=$("#studio-video");if(input)input.value="";refreshStudioVideo()}
+  else if(a==="recipeshopopen"){S.shoppingRecipe=S.recipe;render();$("#main .studio-shop")?.scrollIntoView({block:"start"})}
+  else if(a==="closerecipeshop"){S.shoppingRecipe=null;render()}
+  else if(a==="newrecipe"){S.recipeStudio=false;S.recipeStudioDraft=null;clearStudioVideo();S.editRecipe="__new";render();window.scrollTo(0,0)}
+  else if(a==="canceledit"){S.editRecipe=null;if(S.recipeStudioDraft){S.recipeStudio=true;S.recipeStudioDraft=null}else S.recipeStudio=false;render();window.scrollTo(0,0)}
   else if(a==="revert"){const o=Object.assign({},S.settings.recipes);delete o[b.dataset.id];S.settings.recipes=o;putSettings();toast("Back to your original recipe");render()}
   else if(a==="delrecipe"){if(b.dataset.confirm){const id=b.dataset.id;const o=Object.assign({},S.settings.recipes);if(DEF[id])o[id]={deleted:true};else delete o[id];S.settings.recipes=o;putSettings();S.recipe=null;toast("Meal deleted");render()}else{b.dataset.confirm="1";b.textContent="Tap again to delete"}}
   else if(a==="restore"){const o=Object.assign({},S.settings.recipes);Object.keys(o).forEach(k=>{if(o[k]&&o[k].deleted)delete o[k]});S.settings.recipes=o;putSettings();render()}
@@ -857,11 +874,21 @@ main.addEventListener("change",e=>{
   if(a==="trip"){S.trip=el.value;S.pinned={};render()}
   else if(a==="recstop"){const p=PW.parseBudget(el.value);if(!p.ok||p.value>100){toast("Enter an extra-stop cost from €0 to €100");render();return}
     if(p.value==null||p.value===0)delete S.settings.recStopCost;else S.settings.recStopCost=p.value;putSettings();setTimeout(()=>keepFocus(()=>render()),0)}
+  else if(a==="batchcalories"){const total=el.value.trim()===""?null:num(el.value),serves=Math.round(num($("#e-serves")?.value)||0);if(total!=null&&total>=0&&serves>0&&serves<=200&&$("#e-kcal"))$("#e-kcal").value=String(Math.round(total/serves*10)/10)}
+  else if(a==="studiofile"){const file=el.files&&el.files[0];clearStudioVideo();
+    if(!file){refreshStudioVideo();return}
+    if(!file.type.startsWith("video/")||file.size<1||file.size>150*1024*1024){toast("Choose a video file up to 150 MB");el.value="";refreshStudioVideo();return}
+    studioVideoUrl=URL.createObjectURL(file);studioVideoName=file.name.slice(0,100);refreshStudioVideo()}
+  else if(a==="studiocaptions"){const file=el.files&&el.files[0];if(!file)return;
+    if(file.size<1||file.size>1024*1024||!(/\.(srt|vtt|txt)$/i.test(file.name)||["text/plain","text/vtt"].includes(file.type))){toast("Choose a .txt, .srt or .vtt file up to 1 MB");el.value="";return}
+    file.text().then(raw=>{if(!S.recipeStudio||!$("#studio-text"))return;const cleaned=raw.replace(/^WEBVTT\s*/i,"").split(/\r?\n/).filter(line=>!/^\s*\d+\s*$/.test(line)&&!/\d\d:\d\d:\d\d[,\.]\d+\s*-->/.test(line)&&!/\d\d:\d\d[,\.]\d+\s*-->/.test(line)).join("\n").slice(0,10000);const box=$("#studio-text");box.value=(box.value.trim()?box.value.trim()+"\n\n":"")+cleaned;box.focus();toast("Caption text imported — review before building")}).catch(()=>toast("Couldn't read caption file"))}
   else if(a==="pricephoto"){const file=el.files&&el.files[0];clearPricePhoto();if(!file){refreshPricePhoto();return}
     const bad=photoProblem(file);if(bad){toast(bad);el.value="";refreshPricePhoto();return}
     pricePhotoUrl=URL.createObjectURL(file);pricePhotoName=file.name.slice(0,80);refreshPricePhoto()}
   else if(a==="priceitem"){const w=$("#pr-name-wrap");if(w)w.hidden=el.value!=="__other";if(el.value==="__other"&&$("#pr-name"))$("#pr-name").focus()}
   else if(a==="logtrip"){S.logTrip=el.value;render()}
+  else if(a==="estimate"){const p=PW.parseBudget(el.value);if(!p.ok||p.value==null||p.value>100000){toast("Enter an estimated price between €0 and €100,000");return}
+    const next=(S.settings.customItems||[]).map(c=>c.id===el.dataset.id&&(!c.trip||c.trip===S.trip)?Object.assign({},c,{price:p.value}):c);S.settings.customItems=next;putSettings();render()}
   else if(a==="paid"||a==="store"){const id=el.dataset.id;const r=Object.assign({status:"bought",paid:null,store:""},(S.items[S.trip]||{})[id]);
     if(a==="paid"){const n=num(el.value);r.paid=el.value.trim()===""||n==null?null:Math.round(n*100)/100}else r.store=el.value.trim().slice(0,60);
     putItem(S.trip,id,r);setTimeout(()=>keepFocus(()=>render()),0)}
@@ -879,6 +906,22 @@ main.addEventListener("submit",e=>{
   if(fm==="additem"){e.preventDefault();const name=$("#ni-name").value.trim();if(!name)return;
     const c={id:"u-"+Date.now().toString(36),name:name.slice(0,80),buy:$("#ni-buy").value.trim().slice(0,40),price:num($("#ni-price").value)||0,store:$("#ni-store").value,imageUrl:safeGroceryImageUrl($("#ni-image").value.trim())};
     S.settings.customItems=(S.settings.customItems||[]).concat([c]);putSettings();toast("Added to your list");render();return}
+  if(fm==="studiobuild"){e.preventDefault();const input=$("#studio-text")?.value.trim()||"";if(!input){toast("Add your idea, ingredient list or video caption first");return}
+    const source=$("#studio-source")?.value.trim()||"";if(source&&!PWRS.safeLink(source)){toast("Enter an HTTPS source link");return}
+    S.recipeStudioInput={name:$("#studio-title").value.trim(),slot:$("#studio-slot").value,serves:$("#studio-serves").value,text:input,sourceUrl:source};
+    S.recipeStudioDraft=PWRS.parse(input,S.recipeStudioInput);
+    S.recipeStudio=false;S.editRecipe="__new";render();window.scrollTo(0,0);return}
+  if(fm==="recipeshop"){e.preventDefault();const r=R()[S.shoppingRecipe];if(!r){toast("Open a saved recipe first");return}
+    const selected=[...e.target.querySelectorAll('input[name="rshop-ing"]:checked')].map(el=>Number(el.value));
+    if(!selected.length){toast("Select at least one ingredient with a quantity");return}
+    const mapped=PWRS.proposedItems(r,r.id,selected,$("#recipe-shop-store").value);
+    const existing=Array.isArray(S.settings.customItems)?S.settings.customItems.slice():[];
+    let count=0;for(const item of mapped){const idx=existing.findIndex(c=>c.id===item.id&&c.trip===S.trip);
+      if(idx<0){existing.push(Object.assign({},item,{trip:S.trip}));count++}
+      else existing[idx]=Object.assign({},existing[idx],{name:item.name,buy:item.buy});
+    }
+    S.settings.customItems=existing;putSettings();S.shoppingRecipe=null;S.shopFilter="remaining";S.editList=false;
+    go("shop");toast(count+" new ingredient"+(count===1?"":"s")+" added to this trip");return}
   if(fm==="recipe"){e.preventDefault();saveRecipe();return}
   if(fm==="price"){e.preventDefault();submitPrice();return}
   if(fm!=="weight")return;e.preventDefault();
@@ -897,10 +940,10 @@ function saveRecipe(){
   const name=g("#e-name").trim();if(!name){toast("Give the meal a name");return}
   const rec={name:name.slice(0,80),slot:g("#e-slot"),serves:Math.max(1,Math.round(num(g("#e-serves"))||1)),servingLabel:g("#e-sl").trim().slice(0,40),time:g("#e-time").trim().slice(0,60),
     kcal:num(g("#e-kcal"))||0,p:num(g("#e-p"))||0,c:num(g("#e-c"))||0,f:num(g("#e-f"))||0,fib:num(g("#e-fib"))||0,
-    oven:pairs(g("#e-oven")),ingredients:pairs(g("#e-ing")),steps:lines(g("#e-steps")),portion:lines(g("#e-portion")),storage:lines(g("#e-storage")),notes:g("#e-notes").trim()};
+    oven:pairs(g("#e-oven")),ingredients:pairs(g("#e-ing")),steps:lines(g("#e-steps")),portion:lines(g("#e-portion")),storage:lines(g("#e-storage")),notes:g("#e-notes").trim().slice(0,1500),sourceUrl:PWRS.safeLink(g("#e-source")),nutritionUnverified:g("#e-kcal").trim()==="",draftIncomplete:!g("#e-ing").trim()||!g("#e-steps").trim()};
   const id=S.editRecipe==="__new"?"r-"+Date.now().toString(36):S.editRecipe;
   S.settings.recipes=Object.assign({},S.settings.recipes,{[id]:rec});putSettings();
-  S.editRecipe=null;S.recipe=id;toast("Meal saved");render();window.scrollTo(0,0);
+  S.editRecipe=null;S.recipe=id;S.recipeStudio=false;S.recipeStudioDraft=null;S.recipeStudioInput=null;clearStudioVideo();toast("Meal saved");render();window.scrollTo(0,0);
 }
 let timers=[];let tick=null;let audio=null;
 function startTimer(min,label){

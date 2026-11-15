@@ -1,0 +1,61 @@
+/* Recipe Studio: editorial creative workspace matching Prepwise Nova. */
+.studio-promo,.studio-hero{
+  position:relative;overflow:hidden;isolation:isolate;border-radius:28px;
+  background:radial-gradient(420px 260px at 94% 4%,rgb(50 216 236 / .35),transparent 74%),
+    linear-gradient(120deg,#263174,#5b45bc 70%,#7652d0);color:#fff;
+  box-shadow:0 18px 47px -18px rgb(44 47 136 / .36);
+  padding:27px 29px;border:1px solid rgb(255 255 255 / .15);
+}
+.studio-promo::before,.studio-hero::before{position:absolute;content:"";height:220px;width:220px;right:-90px;bottom:-128px;border:35px solid rgb(255 255 255 / .07);border-radius:50%;z-index:-1;pointer-events:none}
+.studio-promo .eyebrow,.studio-hero .eyebrow{color:#d5f4ff;font-size:.68rem}
+.studio-promo h3{font-size:clamp(1.27rem,2.7vw,1.9rem);color:#fff;font-weight:800;margin:7px 0}
+.studio-promo p,.studio-hero p{color:#eff1ff;line-height:1.65;max-width:58ch}
+.studio-promo .row,.studio-hero .row{align-items:center;gap:17px}
+.studio-promo .btn{background:#fff;color:#40319c;border-color:#fff;box-shadow:0 8px 18px rgb(14 13 78 / .15)}
+.studio-promo .btn:hover{background:#f1f0ff;color:#30247c;border-color:#fff}
+.studio-hero{padding:31px 34px;display:flex;flex-direction:column;gap:13px}
+.studio-hero .chip{align-self:flex-start;background:rgb(255 255 255 / .17);border-color:rgb(255 255 255 / .32);color:#fff}
+.studio-hero h2{font-size:clamp(2rem,5vw,3.15rem);color:#fff;line-height:1.06;max-width:680px}
+.studio-hero .small{font-size:.8rem;color:#e2e6ff}
+.studio-input{gap:21px}
+.studio-input h3{font-size:1.5rem}
+.studio-form{display:flex;flex-direction:column;gap:17px}
+.studio-form .grid2{gap:13px}
+.studio-form textarea{min-height:220px;padding:16px;border-radius:15px;background:var(--surface2);line-height:1.65;resize:vertical}
+.studio-help{padding:14px 16px;border:1px solid color-mix(in srgb,var(--accent) 20%,var(--line));border-radius:15px;background:var(--accent-soft);line-height:1.65;font-size:.84rem}
+.studio-media{display:flex;flex-direction:column;gap:11px;border:1px solid var(--line2);border-radius:18px;padding:19px;background:var(--surface2)}
+.studio-media input[type=file]{display:block;margin-top:8px;max-width:100%;width:100%;font:inherit;font-size:.8rem;color:var(--fg)}
+.studio-media input[type=file]::file-selector-button{font:800 .76rem var(--body);color:var(--accent);background:var(--accent-soft);border:1px solid var(--line2);border-radius:11px;padding:10px 12px;margin-right:12px;cursor:pointer}
+.studio-video-preview{margin:0;border-radius:14px;overflow:hidden;background:#111928;display:flex;flex-direction:column}
+.studio-video-preview video{display:block;width:100%;max-height:330px;object-fit:contain}
+.studio-video-preview figcaption{padding:10px 12px;color:#ebefff;font-size:.76rem;overflow-wrap:anywhere}
+.studio-steps{background:linear-gradient(150deg,var(--surface),var(--accent-soft));border-color:color-mix(in srgb,var(--accent) 15%,var(--line))}
+.studio-steps .grid3{gap:13px}
+.studio-steps .grid3>div{padding:15px 14px;border-radius:14px;background:var(--surface);border:1px solid var(--line);display:flex;flex-direction:column;gap:5px}
+.studio-steps .grid3 b{font-size:.9rem;color:var(--fg)}
+.studio-steps .grid3 p{line-height:1.5}
+.studio-shop{border:1px solid color-mix(in srgb,var(--accent) 30%,var(--line));box-shadow:var(--sh2);gap:19px}
+.studio-shop h3{font-size:1.32rem}
+.studio-shop form{display:flex;flex-direction:column;gap:17px}
+.studio-ingredient-picks{margin:0;padding:0;border:0;min-width:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.studio-ingredient-picks legend{margin-bottom:9px;font-weight:800;color:var(--fg)}
+.studio-ingredient-pick{display:flex;gap:11px;align-items:center;border:1px solid var(--line);border-radius:13px;background:var(--surface2);padding:12px;cursor:pointer;min-width:0}
+.studio-ingredient-pick:has(input:checked){border-color:color-mix(in srgb,var(--accent) 50%,var(--line));background:var(--accent-soft)}
+.studio-ingredient-pick:has(input:disabled){opacity:.7;cursor:not-allowed}
+.studio-ingredient-pick input{flex:0 0 auto;width:19px;height:19px;accent-color:var(--accent)}
+.studio-ingredient-pick span{min-width:0;display:block}
+.studio-ingredient-pick b{display:block;overflow-wrap:anywhere;font-size:.8rem;line-height:1.35}
+.studio-ingredient-pick small{display:block;color:var(--muted);font-size:.74rem;padding-top:3px}
+@media(max-width:650px){
+ .studio-promo,.studio-hero{padding:23px 20px;border-radius:22px}
+ .studio-promo .btn{width:100%;justify-content:center}
+ .studio-input{padding:19px 16px}
+ .studio-steps .grid3,.studio-ingredient-picks{grid-template-columns:1fr}
+ .studio-media{padding:13px}
+}
+@media(prefers-reduced-motion:reduce){
+ .studio-promo,.studio-hero,.studio-video-preview{animation:none!important}
+}
+
+.grocery-estimate{grid-column:1/-1;width:100%;max-width:220px;margin-top:2px}
+.grocery-estimate input{min-height:42px}

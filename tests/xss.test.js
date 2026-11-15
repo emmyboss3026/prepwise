@@ -233,14 +233,16 @@ test("custom image URLs: only clean https URLs are ever rendered", () => {
   for (const bad of ["javascript:alert(1)", "http://example.com/a.png", "data:image/png;base64,AAAA", "https://user:pw@example.com/x.png", "ftp://x/y", "//example.com/a.png", "not a url", "", null, 5, "https://" + "a".repeat(600) + ".com/x.png"])
     assert.equal(f(bad), "", String(bad));
 });
-test("thumbnail markup: hostile image URLs fall back to the illustration, valid ones are escaped", () => {
+test("thumbnail markup: malicious custom URLs never become active HTML; photo choice is explicit", () => {
   const td = today(), ctx = boot("{}"), S = vm.runInContext("S", ctx);
   S.trip = td; S.editList = false; S.shopFilter = "all";
   S.settings.customItems = hostileState(td).settings.customItems;
   const html = String(ctx.viewShop());
-  const srcs = [...html.matchAll(/<img src="([^"]*)"/g)].map(m => m[1]);
-  assert.ok(srcs.length >= 1, "at least one custom image rendered");
-  srcs.forEach(s => assert.match(s, /^https:\/\//, s));
-  assert.ok(!html.includes("javascript:"), "javascript: URL must not reach the page");
-  assert.ok(html.includes("grocery-thumb-fallback"), "built-in items get an illustration");
+  assert.ok(html.includes('data-act="choosephoto"'), "every item has a real-photo picker");
+  assert.ok(html.includes('data-photo-query='), "photos are resolved lazily, not injected into HTML");
+  assert.ok(!html.includes("javascript:"), "javascript: URL must not appear in HTML");
+  assert.ok(!html.includes("<b id=PWNA>"), "item names and search strings are escaped");
+  assert.ok(!html.includes("grocery-thumb-fallback"), "ugly emoji illustrations are removed");
+  const malicious = ctx.items().find(i => i[0] === "u3");
+  assert.equal(ctx.photoRecord(malicious), null, "credential-bearing custom URL is rejected");
 });

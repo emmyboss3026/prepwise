@@ -6,10 +6,12 @@ on:
       - "tests/**"
       - "index.html"
       - "styles.css"
+      - "styles/**"
       - ".github/workflows/test.yml"
   push:
     branches:
-      - feat/product-visual-thumbnails
+      - main
+      - feat/prepwise-nova-visual-redesign
 jobs:
   unit-and-static:
     runs-on: ubuntu-latest

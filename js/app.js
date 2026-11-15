@@ -305,7 +305,7 @@ function photoRecord(i){
   return null;
 }
 function groceryThumb(i){
-  return `<button type="button" class="grocery-thumb" data-act="choosephoto" data-id="${esc(i[0])}" data-photo-query="${esc(PWPH.queryFor(i[0],i[2]))}" aria-label="View or choose a photo for ${esc(i[2])}"><span class="grocery-photo-empty">Photo</span></button`;
+  return `<button type="button" class="grocery-thumb" data-act="choosephoto" data-id="${esc(i[0])}" data-photo-query="${esc(PWPH.queryFor(i[0],i[2]))}" aria-label="View or choose a photo for ${esc(i[2])}"><span class="grocery-photo-empty">Browse photos</span></button>`;
 }
 function showGroceryPhoto(el,photo){
   if(!el||!el.isConnected||!photo||!safeGroceryImageUrl(photo.url))return;
@@ -371,12 +371,13 @@ function mountGroceryPhotos(){
 function photoCandidateList(){
   if(photoSearchError)return `<p class="small" role="alert">${esc(photoSearchError)}</p>`;
   if(!photoChoices.length)return `<p class="muted small">No suitable licensed photographs found. Try a shorter search like “potatoes” or paste your own photo URL.</p>`;
-  return photoChoices.map((p,n)=>`<div class="photo-choice"><button type="button" data-act="photoselect" data-index="${n}" aria-label="Use photo ${n+1}: ${esc(p.title)}"><img loading="lazy" src="${esc(p.url)}" alt="${esc(p.title)}" referrerpolicy="no-referrer"></button><a href="${esc(p.source)}" target="_blank" rel="noopener noreferrer" class="small">Source / license: ${esc(p.license)}</a></div>`).join("");
+  const actual=items().find(i=>i[0]===photoPickId);const product=actual?actual[2]:"Product";
+  return photoChoices.map((p,n)=>`<div class="photo-choice"><button type="button" data-act="photoselect" data-index="${n}" aria-label="Choose photograph ${n+1} for ${esc(product)}"><img loading="lazy" src="${esc(p.url)}" alt="Representative photograph option ${n+1} for ${esc(product)}" referrerpolicy="no-referrer"><span class="photo-choice-product">${esc(product)}</span><span class="photo-choice-action">Choose this photo →</span></button><span class="photo-choice-caption">${esc(p.title)}</span><a href="${esc(p.source)}" target="_blank" rel="noopener noreferrer" class="small">Photograph / license: ${esc(p.license)}</a></div>`).join("");
 }
 function viewPhotoPicker(){
   if(!photoPickId)return "";
   const i=items().find(x=>x[0]===photoPickId);if(!i)return "";
-  return `<section class="card" id="photo-picker" aria-label="Choose a real product photo"><div class="row between"><h3>Find a real picture: ${esc(i[2])}</h3><button class="chip" type="button" data-act="photoclose">Close</button></div>
+  return `<section class="card" id="photo-picker" aria-label="Choose a real product photo"><div class="row between photo-picker-heading"><div><span class="eyebrow">Photo studio · Match your groceries</span><h3>Choose a picture for your product</h3><p class="photo-picker-exact-name">${esc(i[2])}</p></div><button class="chip" type="button" data-act="photoclose">Close</button></div>
     <p class="small muted">Photos come from Wikimedia Commons. Generic food photographs may not match the exact brand or package. Review the picture before selecting it; licensing details are linked below each result. Searching shares the product name with Wikimedia.</p>
     <form data-form="photosearch" class="row"><label class="f" for="photo-search">Search photographs<input id="photo-search" maxlength="80" value="${esc(photoSearchTerm)}"></label><button class="btn" type="submit">Search</button></form>
     <div class="photo-choice-grid" id="photo-options" aria-live="polite">${photoCandidateList()}</div>
@@ -407,7 +408,7 @@ function itemRow(i,extra){
   const diff=st==="bought"&&r.paid!=null?(price-r.paid>=0?`<span class="diff save">${eur(price-r.paid)} under my price</span>`:`<span class="diff more">${eur(r.paid-price)} over my price</span>`):"";
   const tag=src==="offer"?'<span class="tag offer">Offer to 18 Nov</span>':"";
   return `<li class="item${st?" is-"+st:""}">
-    <span class="grocery-product">${groceryThumb(i)}<span class="grocery-product-info"><span class="name">${esc(name)}</span><span class="meta">${extra}</span>${tag}</span></span>
+    <span class="grocery-product">${groceryThumb(i)}<span class="grocery-product-info"><span class="grocery-product-eyebrow">Product to buy</span><span class="name" id="grocery-name-${esc(id)}" title="${esc(name)}">${esc(name)}</span><span class="meta">${extra}</span>${tag}</span></span>
     <span class="price">${right}</span>
     <span class="acts">
       <button type="button" class="chip have" data-act="status" data-id="${esc(id)}" data-st="have" aria-pressed="${st==="have"}">I have it</button>
@@ -534,7 +535,7 @@ function viewRecs(){
 
 function viewShop(){
   const t=tripTotals(S.trip);const cur=tripOf(today());const all=items();const ed=S.editList;
-  let html=`<section class="row between"><div><h2>Grocery list</h2><p class="muted small">${ed?"Editing your list":"Everything you need for this two-week prep"}</p></div>
+  let html=`<section class="row between shop-pagehead"><div><span class="eyebrow">Your shopping studio</span><h2>Grocery list</h2><p class="muted small">${ed?"Editing your list":"Everything you need for this two-week prep"}</p></div>
     <label class="f" for="tripsel">Shopping trip<select id="tripsel" data-act="trip">${tripOptions(S.trip)}</select></label></section>
   <section class="stats" aria-label="Trip totals">
     <div class="stat"><b>${eur(t.planned)}</b><span>Planned</span></div>

@@ -407,12 +407,14 @@ function saveProductPhoto(photo){
 
 function itemRow(i,extra){
   const [id,,name,buy,price,src]=i;const r=(S.items[S.trip]||{})[id]||{};const st=r.status==="have"||r.status==="bought"?r.status:"";
-  const right=st==="bought"&&r.paid!=null?`${eur(r.paid)}<small>you paid</small>`:st==="have"?`${eur(price)}<small>at home</small>`:`${eur(price)}<small>${src==="est"?"est.":"store price"}</small>`;
+  const unknownPrice=src==="mine"&&!(Number(price)>0);
+  const right=st!=="bought"&&unknownPrice?'Price TBD<small>Estimate not set</small>':st==="bought"&&r.paid!=null?`${eur(r.paid)}<small>you paid</small>`:st==="have"?`${eur(price)}<small>at home</small>`:`${eur(price)}<small>${src==="est"?"est.":"store price"}</small>`;
   const diff=st==="bought"&&r.paid!=null?(price-r.paid>=0?`<span class="diff save">${eur(price-r.paid)} under my price</span>`:`<span class="diff more">${eur(r.paid-price)} over my price</span>`):"";
   const tag=src==="offer"?'<span class="tag offer">Offer to 18 Nov</span>':"";
   return `<li class="item${st?" is-"+st:""}">
     <span class="grocery-product">${groceryThumb(i)}<span class="grocery-product-info"><span class="grocery-product-eyebrow">Product to buy</span><span class="name" id="grocery-name-${esc(id)}" title="${esc(name)}">${esc(name)}</span><span class="meta">${extra}</span>${tag}</span></span>
     <span class="price">${right}</span>
+    ${unknownPrice&&st!=="bought"?`<label class="f grocery-estimate" for="estimate-${esc(id)}">Estimated price, €<input id="estimate-${esc(id)}" type="text" inputmode="decimal" data-act="estimate" data-id="${esc(id)}" placeholder="e.g. 3,49" aria-label="Estimated price for ${esc(name)}"></label>`:""}
     <span class="acts">
       <button type="button" class="chip have" data-act="status" data-id="${esc(id)}" data-st="have" aria-pressed="${st==="have"}">I have it</button>
       <button type="button" class="chip" data-act="status" data-id="${esc(id)}" data-st="bought" aria-pressed="${st==="bought"}">Bought</button>
@@ -427,8 +429,9 @@ function itemRow(i,extra){
 function budgetCard(t){
   const budget=PW.parseBudget((S.settings.tripBudgets||{})[S.trip]).value;
   const b=PW.budgetStatus(t.spent,t.left,budget);
+  const unknown=items().filter(i=>i[5]==="mine"&&!(Number(i[4])>0)&&!(S.items[S.trip]||{})[i[0]]?.status).length;
   return `<section class="card" aria-label="Shopping budget"><div class="row between"><h3>Trip budget</h3><label class="f" for="trip-budget">Budget (€)<input type="text" id="trip-budget" inputmode="decimal" data-act="tripbudget" value="${budget==null?"":esc(String(budget).replace(".",","))}" placeholder="Set budget" style="max-width:130px"></label></div>
-    <p class="muted small">Estimated checkout: ${eur(b.total)} · ${eur(t.spent)} purchased · ${eur(t.left)} still to buy. Pantry items are not counted.</p>
+    <p class="muted small">Estimated checkout: ${eur(b.total)} · ${eur(t.spent)} purchased · ${eur(t.left)} still to buy. Pantry items are not counted.</p>${unknown?`<p class="small" role="note"><b>${unknown} unpriced item${unknown===1?"":"s"}:</b> budget forecast excludes their costs until you enter estimates.</p>`:""}
     ${budget==null?"":`<p class="small" aria-live="polite"><strong>${b.over?eur(-b.diff)+" over budget":eur(b.diff)+" under budget"}</strong> based on the estimated total. Enter actual prices for more accuracy.</p><div class="bar${b.over?" offer":""}" role="img" aria-label="Estimated spending ${eur(b.total)} of ${eur(budget)} budget"><i style="--v:${Math.min(100,budget?b.total/budget*100:100).toFixed(1)}"></i></div>`}</section>`;
 }
 /* ---------- Price history (2.4) ---------- */
@@ -884,6 +887,8 @@ main.addEventListener("change",e=>{
     pricePhotoUrl=URL.createObjectURL(file);pricePhotoName=file.name.slice(0,80);refreshPricePhoto()}
   else if(a==="priceitem"){const w=$("#pr-name-wrap");if(w)w.hidden=el.value!=="__other";if(el.value==="__other"&&$("#pr-name"))$("#pr-name").focus()}
   else if(a==="logtrip"){S.logTrip=el.value;render()}
+  else if(a==="estimate"){const p=PW.parseBudget(el.value);if(!p.ok||p.value==null||p.value>100000){toast("Enter an estimated price between €0 and €100,000");return}
+    const next=(S.settings.customItems||[]).map(c=>c.id===el.dataset.id?Object.assign({},c,{price:p.value}):c);S.settings.customItems=next;putSettings();render()}
   else if(a==="paid"||a==="store"){const id=el.dataset.id;const r=Object.assign({status:"bought",paid:null,store:""},(S.items[S.trip]||{})[id]);
     if(a==="paid"){const n=num(el.value);r.paid=el.value.trim()===""||n==null?null:Math.round(n*100)/100}else r.store=el.value.trim().slice(0,60);
     putItem(S.trip,id,r);setTimeout(()=>keepFocus(()=>render()),0)}

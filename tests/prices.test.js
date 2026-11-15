@@ -152,3 +152,10 @@ test("ageDays is calendar-day exact across DST", () => {
   assert.equal(P.ageDays("2026-03-28", "2026-03-30"), 2);
   assert.equal(P.ageDays("2026-10-24", "2026-10-26"), 2);
 });
+test("store key: 'SPAR / INTERSPAR' and 'spar' are one store", () => {
+  assert.equal(P.storeKey("SPAR / INTERSPAR"), "spar");
+  assert.equal(P.storeKey(" Spar "), "spar");
+  assert.equal(P.storeKey(""), "");
+  const [g] = P.compareItem([mk({ store: "SPAR / INTERSPAR" }), mk({ store: "spar", total: "4", date: "2026-11-02" })], "chicken", TODAY);
+  assert.equal(g.stores.length, 1);
+});

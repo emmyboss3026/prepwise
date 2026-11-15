@@ -371,6 +371,41 @@ function submitPrice(){
   savePriceLog(u.log);S.priceDraft=null;S.pricesOpen=true;S.priceItem=r.obs.item;toast(f.id?"Price updated":"Added to price history");render();
 }
 
+/* ---------- Store recommendations (2.5) ---------- */
+const storeLabel=k=>(STORE_OPTS.find(o=>o[0]===k)||[k,k])[1];
+const CONF_TEXT={high:"Strong evidence",medium:"Some evidence",low:"Weak evidence"};
+function recItem(i){
+  const base=i.baselinePrice!=null?` vs ${eur(i.baselinePrice)} ${perUnit(i.unit)} at ${esc(i.plannedStore)} (your plan)`:"";
+  return `<li class="item"><span><span class="name">${esc(i.name)}</span>
+    <span class="meta">${eur(i.price)} ${perUnit(i.unit)} at ${esc(i.store)}${base}</span>
+    <span class="meta">About ${Math.round(i.qty*100)/100} ${PWP.UNIT_LABEL[i.unit]==="item"?(i.qty===1?"item":"items"):PWP.UNIT_LABEL[i.unit]} (your last purchase) is roughly ${eur(i.estCost)}. Price recorded ${fmtDate(i.date,{day:"numeric",month:"short",year:"numeric"})}, ${ageText(i.age)}.${i.stale?" <b>Old price: check before relying on it.</b>":""}</span>
+    <span class="meta"><span class="tag${i.confidence==="low"?" offer":""}">${CONF_TEXT[i.confidence]}</span> ${i.entries} recorded ${i.entries===1?"price":"prices"}</span></span>
+    ${i.saving>0?`<span class="price">−${eur(i.saving)}<small>possible saving</small></span>`:`<span></span>`}</li>`;
+}
+function viewRecs(){
+  const off=!!S.settings.recsOff;
+  let h=`<section class="card" aria-labelledby="h-recs"><div class="row between"><h3 id="h-recs">${ic("cart")}Where to shop next</h3><button class="chip" type="button" data-act="recstoggle" aria-pressed="${!off}">${off?"Off":"On"}</button></div>`;
+  if(off)return h+`<p class="muted small">Recommendations are off. Your price history is kept and nothing is shared.</p></section>`;
+  const log=priceLog(),cur=S.items[S.trip]||{};
+  h+=`<p class="muted small">Based only on prices you recorded yourself. These are past prices, not live shop prices: check the shelf before you rely on them.</p>`;
+  if(!log.length)return h+`<div class="empty"><span class="art">${ic("cart")}</span><b>No price history yet</b><span class="small">Record a few purchases in Price history below. Suggestions appear here once you have prices from more than one store.</span></div></section>`;
+  const remaining=items().filter(i=>i[1]!=="PANTRY"&&!(cur[i[0]]||{}).status).map(i=>({id:i[0],name:shortName(i[2]),store:storeLabel(i[1])}));
+  const stopCost=PW.parseBudget(S.settings.recStopCost).value||0,exclude=Array.isArray(S.settings.recExclude)?S.settings.recExclude.filter(x=>typeof x==="string"):[];
+  const r=PWR.recommend(remaining,{log,today:today(),exclude,stopCost});
+  const n=r.stops.reduce((a,s)=>a+s.items.length,0);
+  h+=`<p aria-live="polite">${n?`<b>Possible saving: ${eur(r.totalSaving)}</b> across ${n} ${n===1?"item":"items"}, if prices are unchanged.${r.weakSaving>0?` A further ${eur(r.weakSaving)} rests on weak evidence and is not counted.`:""}`:`No cheaper store found in your records for the items still to buy.`}<span class="meta">Covers ${r.covered} of ${r.total} items still to buy. The rest have no recorded price at a store you consider.</span></p>`;
+  r.stops.forEach(s=>{h+=`<div class="group"><div class="ghead"><h3 style="font-size:1rem">${esc(s.store)}${s.optional?' <span class="tag">extra stop</span>':""}</h3><span class="gtot">save ${eur(s.saving)}</span></div><ul>${s.items.map(recItem).join("")}</ul></div>`});
+  if(r.staying.length)h+=`<p class="small muted">${r.staying.length} ${r.staying.length===1?"item is":"items are"} already cheapest at your planned store, or the difference is under ${eur(PWR.MIN_SAVING)}.</p>`;
+  if(r.noBaseline.length)h+=`<div class="group"><div class="ghead"><h3 style="font-size:1rem">No saving estimate</h3></div><p class="small muted">You have no recorded price at the store in your plan, so a saving cannot be worked out. Cheapest recorded:</p><ul>${r.noBaseline.map(recItem).join("")}</ul></div>`;
+  const stores=PWP.knownStores(log);
+  h+=`<div class="group"><div class="ghead"><h3 style="font-size:1rem">Your preferences</h3></div>
+    <label class="f" for="rec-stop">Cost of an extra stop, € (travel, time)<input type="text" id="rec-stop" inputmode="decimal" data-act="recstop" value="${stopCost?esc(String(stopCost).replace(".",",")):""}" placeholder="0" style="max-width:130px"></label>
+    <p class="small muted">A store you do not already visit is only suggested if it saves more than this.</p>
+    ${stores.length?`<div role="group" aria-label="Stores to consider" class="chips">${stores.map(s=>`<button type="button" class="chip" data-act="recstore" data-store="${esc(s)}" aria-pressed="${!exclude.some(x=>PWP.storeKey(x)===PWP.storeKey(s))}">${esc(s)}</button>`).join("")}</div><p class="small muted">Untick a store you will not shop at.</p>`:""}</div>`;
+  h+=`<details><summary class="small">How this is worked out</summary><p class="small muted">For each item still to buy, Prepwise takes the lowest regular price you recorded at each store (offers and unusual prices are ignored), multiplies it by the amount you bought last time, and compares it with your recorded price at the store in your plan. No saving is shown without that recorded price. Nothing is fetched from any shop, and your records stay in your own account.</p></details></section>`;
+  return h;
+}
+
 function viewShop(){
   const t=tripTotals(S.trip);const cur=tripOf(today());const all=items();const ed=S.editList;
   let html=`<section class="row between"><div><h2>Grocery list</h2><p class="muted small">${ed?"Editing your list":"Everything you need for this two-week prep"}</p></div>
@@ -430,7 +465,7 @@ function viewShop(){
     html+=`</tbody></table></div><p class="muted small">“vs plan” compares what you spent with my planned total minus what you already had.</p></section>`;
   }
   if(!trips.length&&!ed)html+=`<section class="card"><div class="empty"><span class="art">${ic("cart")}</span><b>Your spending history starts here</b><span class="small">Mark items as bought and add what you paid. Each trip is saved so you can compare against your plan.</span></div></section>`;
-  if(!ed)html+=viewPrices();
+  if(!ed)html+=viewRecs()+viewPrices();
   if(!ed)html+=`<section class="row"><button class="btn danger" type="button" data-act="reset">Reset this trip</button></section>`;
   return html;
 }
@@ -637,6 +672,10 @@ main.addEventListener("click",e=>{
   else if(a==="eat"){const d=b.dataset.day,sl=b.dataset.slot;const x=Object.assign({},(S.log[d]||{})[sl]);x.eaten=!x.eaten;x.meal=b.dataset.meal;putLog(d,sl,x);keepFocus(()=>render(),null,`[data-act=eat][data-day="${d}"][data-slot="${sl}"]`)}
   else if(a==="delw"){putWeight(b.dataset.day,null);render()}
   else if(a==="ics")downloadIcs();
+  else if(a==="recstoggle"){S.settings.recsOff=!S.settings.recsOff;putSettings();keepFocus(()=>render(),null,"[data-act=recstoggle]")}
+  else if(a==="recstore"){const k=PWP.storeKey(b.dataset.store),ex=(Array.isArray(S.settings.recExclude)?S.settings.recExclude:[]).filter(x=>typeof x==="string");
+    S.settings.recExclude=ex.some(x=>PWP.storeKey(x)===k)?ex.filter(x=>PWP.storeKey(x)!==k):ex.concat([b.dataset.store]);putSettings();
+    keepFocus(()=>render(),null,`[data-act=recstore][data-store="${CSS.escape(b.dataset.store)}"]`)}
   else if(a==="pricestoggle"){S.pricesOpen=!S.pricesOpen;if(!S.pricesOpen)S.priceDraft=null;render()}
   else if(a==="priceprod"){const it=b.dataset.item;S.priceItem=S.priceItem===it?null:it;S.pricesOpen=true;keepFocus(()=>render(),null,`[data-act=priceprod][data-item="${CSS.escape(it)}"]`)}
   else if(a==="pricecancel"){S.priceDraft=null;render()}
@@ -672,6 +711,8 @@ main.addEventListener("click",e=>{
 main.addEventListener("change",e=>{
   const el=e.target,a=el.dataset.act;if(!a)return;
   if(a==="trip"){S.trip=el.value;S.pinned={};render()}
+  else if(a==="recstop"){const p=PW.parseBudget(el.value);if(!p.ok||p.value>100){toast("Enter an extra-stop cost from €0 to €100");render();return}
+    if(p.value==null||p.value===0)delete S.settings.recStopCost;else S.settings.recStopCost=p.value;putSettings();setTimeout(()=>keepFocus(()=>render()),0)}
   else if(a==="priceitem"){const w=$("#pr-name-wrap");if(w)w.hidden=el.value!=="__other";if(el.value==="__other"&&$("#pr-name"))$("#pr-name").focus()}
   else if(a==="logtrip"){S.logTrip=el.value;render()}
   else if(a==="paid"||a==="store"){const id=el.dataset.id;const r=Object.assign({status:"bought",paid:null,store:""},(S.items[S.trip]||{})[id]);

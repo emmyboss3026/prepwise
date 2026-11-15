@@ -52,6 +52,9 @@ const server=http.createServer((req,res)=>{
       };
       await checkOverflow("Shopping");
       if(width===390||width===1440)await page.screenshot({path:path.join(artifact,"shop-"+width+".png")});
+      await page.locator(".shop-jump").click();
+      assert.equal(await page.locator("#shop-items").count(),1);
+      if(width===390||width===1440)await page.screenshot({path:path.join(artifact,"products-"+width+".png")});
       await page.locator(".grocery-thumb").first().click();
       await page.locator(".photo-picker-exact-name").waitFor();
       assert.equal((await page.locator(".photo-picker-exact-name").innerText()).trim(),name.trim(),

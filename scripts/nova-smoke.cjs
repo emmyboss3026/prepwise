@@ -73,6 +73,54 @@ const server=http.createServer((req,res)=>{
         assert.ok(await page.locator("#main").innerHTML().then(x=>x.length>40),"Tab "+tab+" rendered");
         await checkOverflow("Tab "+tab);
       }
+
+      /* Recipe Studio: video/text intake, editable quantities, calorie review and shopping integration */
+      await page.locator('nav.tabs button[data-tab="cooking"]').click();
+      await page.locator('[data-act="recipestudio"]').click();
+      await page.locator("#studio-text").waitFor();
+      assert.ok(await page.locator('video').count()===0,"No video is automatically fetched");
+      if(width===390){
+        await page.screenshot({path:path.join(artifact,"recipe-studio-390.png")});
+        await page.locator("#studio-video").setInputFiles({name:"sample.mp4",mimeType:"video/mp4",buffer:Buffer.from("0000001866747970","hex")});
+        assert.equal(await page.locator("#studio-video-preview video").count(),1,"Video preview is local");
+        await page.locator('[data-act="studiovideoclear"]').click();
+        assert.equal(await page.locator("#studio-video-preview video").count(),0,"Video preview can be cleared");
+        await page.locator("#studio-captions").setInputFiles({
+          name:"captions.srt",mimeType:"text/plain",
+          buffer:Buffer.from("1\n00:00:01,000 --> 00:00:04,000\nAdd vegetables\n")
+        });
+        await page.waitForFunction(()=>document.querySelector("#studio-text")?.value.includes("Add vegetables"));
+      }
+      await page.locator("#studio-title").fill("Test tofu bowls");
+      await page.locator("#studio-serves").fill("4");
+      await page.locator("#studio-source").fill("https://www.youtube.com/watch?v=test");
+      await page.locator("#studio-text").fill("Recipe: Test tofu bowls\nIngredients:\n400 g Tofu cubes\n2 tbsp Olive oil\nSteps:\n1. Heat pan and cook tofu thoroughly.\n2. Divide into bowls.");
+      await page.locator('form[data-form="studiobuild"] button[type=submit]').click();
+      await page.locator("#e-ing").waitFor();
+      assert.match(await page.locator("#e-ing").inputValue(),/400 g \| Tofu cubes/);
+      assert.equal(await page.locator("#e-kcal").inputValue(),"","Unknown nutrition is never invented");
+      await page.locator("#e-total-kcal").fill("800");
+      await page.locator("#e-total-kcal").dispatchEvent("change");
+      assert.equal(await page.locator("#e-kcal").inputValue(),"200","Known batch calories divided by 4 portions");
+      await checkOverflow("Recipe editor");
+      if(width===390)await page.screenshot({path:path.join(artifact,"recipe-editor-390.png")});
+      await page.locator('form[data-form="recipe"] button[type=submit]').click();
+      assert.match(await page.locator("#main").innerText(),/Test tofu bowls/);
+      assert.ok(await page.locator('a[href="https://www.youtube.com/watch?v=test"]').count(),"Source link is preserved");
+      await page.locator('[data-act="recipeshopopen"]').click();
+      await page.locator('form[data-form="recipeshop"]').waitFor();
+      assert.equal(await page.locator('input[name="rshop-ing"]:checked').count(),2);
+      await checkOverflow("Recipe shopping");
+      await page.locator('form[data-form="recipeshop"] button[type=submit]').click();
+      await page.locator(".grocery-product-info .name").filter({hasText:"Tofu cubes"}).first().waitFor();
+      assert.equal(await page.locator('.grocery-product-info .name').filter({hasText:"Tofu cubes"}).count(),1,
+        "Generated ingredient is not duplicated");
+      await page.reload({waitUntil:"load"});
+      await page.locator('nav.tabs button[data-tab="cooking"]').click();
+      assert.ok(await page.locator('.rcard .rt').filter({hasText:"Test tofu bowls"}).count(),
+        "Saved recipe survives refresh");
+      await checkOverflow("Saved recipe");
+
       await context.close();
     }
     assert.deepEqual(errors,[],"Unexpected browser JavaScript errors");

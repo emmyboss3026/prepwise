@@ -311,9 +311,19 @@ function showGroceryPhoto(el,photo){
   if(!el||!el.isConnected||!photo||!safeGroceryImageUrl(photo.url))return;
   const img=document.createElement("img");
   img.src=photo.url;img.alt="";img.loading="lazy";img.decoding="async";img.referrerPolicy="no-referrer";
-  img.addEventListener("error",()=>{if(img.parentNode===el){el.replaceChildren();el.textContent="Add photo";el.classList.remove("has-photo")}},{once:true});
+  img.addEventListener("error",()=>{if(img.parentNode===el){el.replaceChildren();el.textContent="Add photo";el.classList.remove("has-photo");const info=el.parentElement&&el.parentElement.querySelector(".grocery-product-info");const credit=info&&info.querySelector(".grocery-photo-credit");if(credit)credit.remove()}},{once:true});
   el.replaceChildren(img);
   el.classList.add("has-photo");
+  const info=el.parentElement&&el.parentElement.querySelector(".grocery-product-info");
+  if(info){
+    const existing=info.querySelector(".grocery-photo-credit");if(existing)existing.remove();
+    if(photo.source){
+      const link=document.createElement("a");link.className="grocery-photo-credit";
+      link.href=photo.source;link.target="_blank";link.rel="noopener noreferrer";
+      link.textContent="Photo: "+(photo.artist||"Wikimedia Commons")+" · "+(photo.license||"See license");
+      link.title="Open original image, creator and reuse license";info.appendChild(link);
+    }
+  }
   el.title=photo.source?"Representative real photo; not necessarily exact packaging. Tap to choose another.":"Custom linked photo; tap to change.";
 }
 function photoFromCache(term){
@@ -786,7 +796,7 @@ main.addEventListener("click",e=>{
     r.status=r.status===st?"":st;if(r.status!=="bought"){r.paid=null;r.store=""}putItem(S.trip,id,r);keepFocus(()=>render(),b.id||null,`[data-act=status][data-id="${id}"][data-st="${st}"]`)}
   else if(a==="choosephoto"){
     photoPickId=b.dataset.id;photoSearchTerm=PWPH.queryFor(b.dataset.id,(items().find(i=>i[0]===b.dataset.id)||[])[2]);photoChoices=[];photoSearchError="";
-    render();const picker=$("#photo-picker");if(picker)picker.scrollIntoView({block:"start",behavior:"instant"});runPhotoSearch(photoSearchTerm)
+    render();const picker=$("#photo-picker");if(picker)picker.scrollIntoView({block:"start"});runPhotoSearch(photoSearchTerm)
   }
   else if(a==="photoclose"){closePhotoPicker()}
   else if(a==="photoselect"){const picked=photoChoices[Number(b.dataset.index)];if(picked)saveProductPhoto(picked)}

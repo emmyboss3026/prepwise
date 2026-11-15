@@ -63,6 +63,23 @@
     return { planned, have, spent, est, left, done, total: list.length };
   }
 
+  /* ---------- Trip budget ---------- */
+  /* Accepts "", 0..100000 with up to 2 decimals (comma or dot). Anything else (1e3, -5, abc) is rejected, not guessed. */
+  function parseBudget(raw) {
+    raw = String(raw == null ? "" : raw).trim();
+    if (raw === "") return { ok: true, value: null };
+    if (!/^\d{1,6}([.,]\d{1,2})?$/.test(raw)) return { ok: false, value: null };
+    const n = parseFloat(raw.replace(",", "."));
+    return n > 100000 ? { ok: false, value: null } : { ok: true, value: n };
+  }
+  /* total = purchased + still to buy (pantry excluded, as in tripTotals). */
+  function budgetStatus(spent, left, budget) {
+    const total = spent + left;
+    if (budget == null) return { total, diff: null, over: false };
+    const diff = Math.round((budget - total) * 100) / 100;
+    return { total, diff, over: diff < 0 };
+  }
+
   /* ---------- Body maths (Mifflin–St Jeor) ---------- */
   function bodyStats(s) {
     s = s || {};
@@ -115,5 +132,5 @@
   }
 
   return { ANCHOR, LKEY, esc, num, r1, eur, iso, parse, addDays, diffDays, tripOf, nextCookDay, greeting,
-    scaleAmt, stepParts, tripTotals, bodyStats, emptyState, normalizeLocal, serializeLocal, mapCloud };
+    scaleAmt, stepParts, tripTotals, parseBudget, budgetStatus, bodyStats, emptyState, normalizeLocal, serializeLocal, mapCloud };
 });

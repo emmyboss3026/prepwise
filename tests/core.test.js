@@ -186,3 +186,32 @@ test("every default recipe has the fields the app relies on", () => {
   }
   delete global.window;
 });
+
+/* ---------- Trip budget (Prepwise 2.2) ---------- */
+test("parseBudget accepts empty, plain, comma and dot amounts", () => {
+  assert.deepEqual(PW.parseBudget(""), { ok: true, value: null });
+  assert.deepEqual(PW.parseBudget(undefined), { ok: true, value: null });
+  assert.deepEqual(PW.parseBudget(" 85,50 "), { ok: true, value: 85.5 });
+  assert.deepEqual(PW.parseBudget("100000"), { ok: true, value: 100000 });
+  assert.deepEqual(PW.parseBudget(0), { ok: true, value: 0 });
+  assert.deepEqual(PW.parseBudget(120.25), { ok: true, value: 120.25 });
+});
+test("parseBudget rejects instead of guessing", () => {
+  for (const bad of ["-5", "1e3", "abc", "12,345", "1.234", "100001", "9999999", "€50", "5 0"]) assert.equal(PW.parseBudget(bad).ok, false, bad);
+});
+test("budgetStatus: under, over, exact and no budget", () => {
+  assert.deepEqual(PW.budgetStatus(30, 50, 100), { total: 80, diff: 20, over: false });
+  assert.deepEqual(PW.budgetStatus(30, 80, 100), { total: 110, diff: -10, over: true });
+  assert.deepEqual(PW.budgetStatus(40, 60, 100), { total: 100, diff: 0, over: false });
+  assert.deepEqual(PW.budgetStatus(30, 50, null), { total: 80, diff: null, over: false });
+  assert.equal(PW.budgetStatus(0.1, 0.2, 0.3).over, false); // float noise must not flag "over"
+});
+test("forecast excludes unbought pantry items (regression: PR #5 counted them)", () => {
+  const t = PW.tripTotals(LIST, { a: { status: "bought", paid: 8 } });
+  const b = PW.budgetStatus(t.spent, t.left, 40);
+  assert.equal(PW.eur(b.total), "€35.89"); // 8 paid + 0.95 + 26.94; pantry 0.39 + 1.29 excluded
+});
+test("bought pantry item counts as real spend", () => {
+  const t = PW.tripTotals(LIST, { p: { status: "bought", paid: 0.5 } });
+  assert.equal(PW.eur(PW.budgetStatus(t.spent, t.left, null).total), "€36.76"); // 0.5 spent + 36.26 left
+});

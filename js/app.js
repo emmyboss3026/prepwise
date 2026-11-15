@@ -91,9 +91,9 @@ const DINNERS=["Cajun","Cajun","Alfredo","Alfredo","Middle Eastern","Middle East
 const STORE_OPTS=[["SPAR","SPAR / INTERSPAR"],["HOFER","HOFER"],["BILLA","BILLA"],["LIDL","Lidl"],["OTHER","Other store"],["PANTRY","Pantry"]];
 const ACTIVITY=[["1.2","Mostly sitting"],["1.375","Light (1–3 workouts/week)"],["1.55","Moderate (3–5/week)"],["1.725","Hard (6–7/week)"],["1.9","Very hard or physical job"]];
 
-function items(){
+function items(trip=S.trip){
   const st=S.settings||{};const hid=st.hiddenItems||[];
-  const own=(st.customItems||[]).map(c=>[c.id,c.store||"OTHER",c.name,c.buy||"",num(c.price)||0,"mine",{}]);
+  const own=(st.customItems||[]).filter(c=>!c.trip||c.trip===trip).map(c=>[c.id,c.store||"OTHER",c.name,c.buy||"",num(c.price)||0,"mine",{}]);
   return ITEMS.filter(i=>!hid.includes(i[0])).concat(own);
 }
 /* ---------- Helpers ---------- */
@@ -116,6 +116,9 @@ syncTheme();
 
 /* ---------- State & storage ---------- */
 const S={tab:"home",group:"store",shopFilter:"remaining",pinned:{},trip:tripOf(today()),logTrip:tripOf(today()),items:{},settings:{},log:{},weights:{},user:null,cloud:false,loading:false};
+S.recipeStudio=false;S.recipeStudioDraft=null;S.shoppingRecipe=null;
+let studioVideoUrl="",studioVideoName="";
+function clearStudioVideo(){if(studioVideoUrl)URL.revokeObjectURL(studioVideoUrl);studioVideoUrl="";studioVideoName=""}
 let sb=null;
 try{if(window.supabase)sb=window.supabase.createClient(SB_URL,SB_KEY)}catch(e){sb=null}
 
@@ -160,7 +163,7 @@ async function clearTrip(trip){
 }
 
 /* ---------- Calculations ---------- */
-function tripTotals(trip){return PW.tripTotals(items(),S.items[trip])}
+function tripTotals(trip){return PW.tripTotals(items(trip),S.items[trip])}
 function dinnerFor(day){const n=((diffDays(ANCHOR,day)%14)+14)%14;const r=R();const d=DINNERS[n%8];if(r[d]&&r[d].slot==="dinner")return d;const ds=bySlot("dinner");return ds.length?ds[n%ds.length].id:null}
 function defSlot(sl){const p=(S.settings.plan||{})[sl];const r=R();if(p&&r[p])return p;const def=sl==="breakfast"?"Burritos":"Pancakes";if(r[def]&&r[def].slot===sl)return def;const l=bySlot(sl);return l.length?l[0].id:null}
 function plannedDay(){
@@ -197,7 +200,7 @@ function render(opt){
   if(S.tab==="shop")mountGroceryPhotos();
 }
 /* Switch section: render with a staggered entrance, reset scroll, move focus to the content for screen readers. */
-function go(tab,pre){if(tab!==S.tab){S.pinned={};clearPricePhoto()}S.tab=tab;if(pre)pre();render({enter:true});window.scrollTo(0,0);main.focus({preventScroll:true})}
+function go(tab,pre){if(tab!==S.tab){S.pinned={};clearPricePhoto();if(tab!=="cooking"){clearStudioVideo();S.recipeStudio=false;S.shoppingRecipe=null}}S.tab=tab;if(pre)pre();render({enter:true});window.scrollTo(0,0);main.focus({preventScroll:true})}
 
 /* ---------- Home dashboard ---------- */
 const SLOT_RANK={breakfast:0,lunch:1,dinner:2,snack:3};
@@ -220,7 +223,7 @@ function viewHome(){
   if(S.loading)return skeletonHome();
   const td=today(),cur=tripOf(td),next=PW.nextCookDay(td),left=diffDays(td,next),rs=R();
   const nm=S.settings.displayName||(S.user&&S.user.email?S.user.email.split("@")[0]:"");
-  const t=tripTotals(cur),all=items(),eaten=dayEaten(td),pd=plannedDay();
+  const t=tripTotals(cur),all=items(cur),eaten=dayEaten(td),pd=plannedDay();
   const nextTxt=left===0?"Today":left===1?"Tomorrow":"In "+left+" days";
   const toBuy=all.filter(i=>i[1]!=="PANTRY"&&!((S.items[cur]||{})[i[0]]||{}).status).length;
 

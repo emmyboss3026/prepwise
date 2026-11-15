@@ -196,7 +196,7 @@ function render(opt){
   if(S.tab==="progress")drawChart();
 }
 /* Switch section: render with a staggered entrance, reset scroll, move focus to the content for screen readers. */
-function go(tab,pre){if(tab!==S.tab)S.pinned={};S.tab=tab;if(pre)pre();render({enter:true});window.scrollTo(0,0);main.focus({preventScroll:true})}
+function go(tab,pre){if(tab!==S.tab){S.pinned={};clearPricePhoto()}S.tab=tab;if(pre)pre();render({enter:true});window.scrollTo(0,0);main.focus({preventScroll:true})}
 
 /* ---------- Home dashboard ---------- */
 const SLOT_RANK={breakfast:0,lunch:1,dinner:2,snack:3};
@@ -321,10 +321,13 @@ const canonStore=t=>{const k=PWP.storeKey(t);return [...STORE_OPTS.map(o=>o[1]),
 function savePriceLog(log){S.settings.priceLog=log;putSettings()}
 /* Photo preview is local-only: no OCR, upload, image retention or inferred prices. */
 let pricePhotoUrl=null,pricePhotoName="";
+const PHOTO_TYPES=["image/jpeg","image/png","image/webp"],PHOTO_MAX=5*1024*1024;
+/* "" when the file is acceptable, otherwise the message to show. */
+function photoProblem(f){return !f?"":!PHOTO_TYPES.includes(f.type)||f.size===0||f.size>PHOTO_MAX?"Use a JPG, PNG or WebP image up to 5 MB":""}
 function clearPricePhoto(){if(pricePhotoUrl)URL.revokeObjectURL(pricePhotoUrl);pricePhotoUrl=null;pricePhotoName=""}
 function pricePhotoMarkup(){return pricePhotoUrl?`<figure><img class="price-photo-preview" src="${esc(pricePhotoUrl)}" alt="Preview of your selected product or receipt"><figcaption class="small">${esc(pricePhotoName)} · preview only</figcaption></figure><button class="chip" type="button" data-act="pricephotoclear">Remove preview</button>`:""}
 function refreshPricePhoto(){const box=$("#price-photo-display");if(box)box.innerHTML=pricePhotoMarkup()}
-function viewPricePhoto(){return `<div class="price-photo-box"><label class="f" for="pr-photo">Optional product or receipt photo (preview only)<input id="pr-photo" type="file" data-act="pricephoto" accept="image/jpeg,image/png,image/webp" capture="environment" aria-describedby="pr-photo-help"></label><p class="muted small" id="pr-photo-help">Your photo stays on this device and is not uploaded or saved. Enter the price and store manually; no image recognition is performed.</p><div id="price-photo-display" aria-live="polite">${pricePhotoMarkup()}</div></div>`}
+function viewPricePhoto(){return `<div class="price-photo-box"><label class="f" for="pr-photo">Optional product or receipt photo (preview only)<input id="pr-photo" type="file" data-act="pricephoto" accept="image/jpeg,image/png,image/webp" aria-describedby="pr-photo-help"></label><p class="muted small" id="pr-photo-help">Your photo stays on this device and is not uploaded or saved. Enter the price and store manually; no image recognition is performed.</p><div id="price-photo-display" aria-live="polite">${pricePhotoMarkup()}</div></div>`}
 function viewPrices(){
   const log=priceLog(),td=today(),d=S.priceDraft||null,open=!!S.pricesOpen||!!d;
   let h=`<section class="card" aria-labelledby="h-prices"><div class="row between"><h3 id="h-prices">${ic("trend")}Price history</h3><button class="chip" type="button" data-act="pricestoggle" aria-expanded="${open}" aria-controls="prices-body">${open?"Hide":"Show"} · ${log.length}</button></div>`;
@@ -683,7 +686,7 @@ main.addEventListener("click",e=>{
   else if(a==="recstore"){const k=PWP.storeKey(b.dataset.store),ex=(Array.isArray(S.settings.recExclude)?S.settings.recExclude:[]).filter(x=>typeof x==="string");
     S.settings.recExclude=ex.some(x=>PWP.storeKey(x)===k)?ex.filter(x=>PWP.storeKey(x)!==k):ex.concat([b.dataset.store]);putSettings();
     keepFocus(()=>render(),null,`[data-act=recstore][data-store="${CSS.escape(b.dataset.store)}"]`)}
-  else if(a==="pricestoggle"){S.pricesOpen=!S.pricesOpen;if(!S.pricesOpen)S.priceDraft=null;render()}
+  else if(a==="pricestoggle"){S.pricesOpen=!S.pricesOpen;if(!S.pricesOpen){S.priceDraft=null;clearPricePhoto()}render()}
   else if(a==="priceprod"){const it=b.dataset.item;S.priceItem=S.priceItem===it?null:it;S.pricesOpen=true;keepFocus(()=>render(),null,`[data-act=priceprod][data-item="${CSS.escape(it)}"]`)}
   else if(a==="pricecancel"){clearPricePhoto();S.priceDraft=null;render()}
   else if(a==="pricephotoclear"){clearPricePhoto();const inp=$("#pr-photo");if(inp)inp.value="";refreshPricePhoto()}
@@ -722,7 +725,7 @@ main.addEventListener("change",e=>{
   else if(a==="recstop"){const p=PW.parseBudget(el.value);if(!p.ok||p.value>100){toast("Enter an extra-stop cost from €0 to €100");render();return}
     if(p.value==null||p.value===0)delete S.settings.recStopCost;else S.settings.recStopCost=p.value;putSettings();setTimeout(()=>keepFocus(()=>render()),0)}
   else if(a==="pricephoto"){const file=el.files&&el.files[0];clearPricePhoto();if(!file){refreshPricePhoto();return}
-    if(!["image/jpeg","image/png","image/webp"].includes(file.type)||file.size>5*1024*1024||file.size===0){toast("Use a JPG, PNG or WebP image up to 5 MB");el.value="";refreshPricePhoto();return}
+    const bad=photoProblem(file);if(bad){toast(bad);el.value="";refreshPricePhoto();return}
     pricePhotoUrl=URL.createObjectURL(file);pricePhotoName=file.name.slice(0,80);refreshPricePhoto()}
   else if(a==="priceitem"){const w=$("#pr-name-wrap");if(w)w.hidden=el.value!=="__other";if(el.value==="__other"&&$("#pr-name"))$("#pr-name").focus()}
   else if(a==="logtrip"){S.logTrip=el.value;render()}

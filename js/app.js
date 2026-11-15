@@ -639,6 +639,7 @@ function setCk(id,v){try{localStorage.setItem(ckKey(id),JSON.stringify(v))}catch
 function viewCooking(){
   const rs=R();
   if(S.editRecipe)return viewEdit();
+  if(S.recipeStudio)return viewRecipeStudio();
   if(S.recipe&&rs[S.recipe])return viewRecipe(rs[S.recipe]);
   let html=`<section><h2>Cooking Time</h2><p class="muted small">Step-by-step guides with amounts, oven settings, timers and portions. Every meal can be edited, and you can add your own.</p></section>`;
   ["breakfast","lunch","dinner","snack"].forEach(sl=>{
@@ -647,6 +648,7 @@ function viewCooking(){
     list.forEach(r=>{html+=`<button type="button" class="card rcard" data-act="open" data-id="${esc(r.id)}" data-slot="${esc(r.slot)}"><span class="tile">${slotIc(r.slot)}</span><span style="min-width:0"><span class="rt">${esc(r.name)}</span><span class="meta">${ic("clock")} ${esc(r.time||"No time set")} · makes ${esc(r.serves)} × ${esc(r.servingLabel||"serving")}</span>${macroShare(r)}${r.edited?'<span class="tag">Edited</span>':""}${!r.builtin?'<span class="tag">Your meal</span>':""}</span><span class="kc">${Math.round(num(r.kcal)||0)}<small>kcal each</small><em>${r1(num(r.p)||0)} g protein</em></span></button>`});
     html+=`</section>`;
   });
+  html+=`<section class="studio-promo"><span class="eyebrow">New · Recipe Studio</span><div class="row between"><div><h3>Got a recipe idea or cooking video?</h3><p class="small">Turn your written idea, caption or transcript into an editable guide, then shop for it.</p></div><button class="btn" type="button" data-act="recipestudio">Open Recipe Studio →</button></div></section>`;
   html+=`<section class="row"><button class="btn" type="button" data-act="newrecipe">Add a meal</button>${Object.keys(S.settings.recipes||{}).some(k=>DEF[k]&&S.settings.recipes[k].deleted)?`<button class="btn ghost" type="button" data-act="restore">Restore deleted meals</button>`:""}</section>`;
   return html;
 }
@@ -661,16 +663,18 @@ function viewRecipe(r){
   if((r.portion||[]).length)html+=`<section class="card"><h3>Portioning</h3><ul>${r.portion.map(x=>`<li class="small" style="padding:4px 0">${esc(x)}</li>`).join("")}</ul><p class="muted small">Weigh each cooked component and divide by the number of servings for exact portions.</p></section>`;
   if((r.storage||[]).length)html+=`<section class="card"><h3>Storage & reheating</h3><ul>${r.storage.map(x=>`<li class="small" style="padding:4px 0">${esc(x)}</li>`).join("")}</ul></section>`;
   if(r.notes)html+=`<section class="note ok">${esc(r.notes)}</section>`;
-  html+=`<section class="row"><button class="btn" type="button" data-act="edit" data-id="${esc(r.id)}">Edit this meal</button><button class="btn ghost" type="button" data-act="clearck">Clear ticks</button>
+  if(r.sourceUrl&&PWRS.safeLink(r.sourceUrl))html+=`<section class="card"><h3>Original recipe source</h3><a href="${esc(PWRS.safeLink(r.sourceUrl))}" target="_blank" rel="noopener noreferrer">Open the original video or recipe ↗</a></section>`;
+  if(S.shoppingRecipe===r.id)html+=recipeShoppingCard(r);
+  html+=`<section class="row"><button class="btn" type="button" data-act="recipeshopopen">Add ingredients to shopping</button><button class="btn ghost" type="button" data-act="edit" data-id="${esc(r.id)}">Edit this meal</button><button class="btn ghost" type="button" data-act="clearck">Clear ticks</button>
     ${r.builtin&&r.edited?`<button class="btn ghost" type="button" data-act="revert" data-id="${esc(r.id)}">Back to my original</button>`:""}
     <button class="btn danger" type="button" data-act="delrecipe" data-id="${esc(r.id)}">Delete meal</button></section>`;
   return html;
 }
 function linesOf(arr,pair){return (arr||[]).map(x=>pair?(x[0]+" | "+x[1]):x).join("\n")}
 function viewEdit(){
-  const id=S.editRecipe,r=id==="__new"?{name:"",slot:"dinner",serves:4,servingLabel:"1 bowl",time:"",kcal:"",p:"",c:"",f:"",fib:"",oven:[],ingredients:[],steps:[],portion:[],storage:[],notes:""}:R()[id];
+  const id=S.editRecipe,r=id==="__new"?(S.recipeStudioDraft||{name:"",slot:"dinner",serves:4,servingLabel:"1 bowl",time:"",kcal:"",p:"",c:"",f:"",fib:"",oven:[],ingredients:[],steps:[],portion:[],storage:[],notes:""}):R()[id];
   if(!r){S.editRecipe=null;return viewCooking()}
-  return `<section class="row between"><h2>${id==="__new"?"Add a meal":"Edit meal"}</h2><button class="btn ghost" type="button" data-act="canceledit">Cancel</button></section>
+  return `${id==="__new"&&S.recipeStudioDraft?`<section class="note"><b>Review your draft before saving.</b><p class="small">No quantities, instructions or calories were invented. ${esc((S.recipeStudioDraft.missing||[]).join(" · "))}</p><p class="small">${PWRS.suggestions(S.recipeStudioDraft).map(esc).join(" · ")}</p></section>`:""}<section class="row between"><h2>${id==="__new"?"Add a meal":"Edit meal"}</h2><button class="btn ghost" type="button" data-act="canceledit">Cancel</button></section>
   <form class="card" data-form="recipe">
    <label class="f" for="e-name">Name<input type="text" id="e-name" required maxlength="80" value="${esc(r.name)}"></label>
    <div class="grid3">
@@ -678,8 +682,10 @@ function viewEdit(){
     <label class="f" for="e-serves">Servings<input type="number" id="e-serves" min="1" max="200" value="${esc(r.serves)}"></label>
     <label class="f" for="e-sl">One serving is<input type="text" id="e-sl" maxlength="40" value="${esc(r.servingLabel||"")}"></label>
    </div>
+   <label class="f" for="e-source">Original video/recipe link (optional)<input id="e-source" type="url" maxlength="1000" value="${esc(r.sourceUrl||"")}" placeholder="https://..."></label>
    <label class="f" for="e-time">Total time<input type="text" id="e-time" maxlength="60" value="${esc(r.time||"")}" placeholder="e.g. About 1 hour"></label>
-   <p class="small"><b>Nutrition per serving</b></p>
+   <p class="small"><b>Nutrition per serving</b> — optional. Enter measured/verified values, or leave blank; text is never treated as a calorie source.</p>
+   <label class="f" for="e-total-kcal">Optional: known calories for entire batch<input id="e-total-kcal" type="number" data-act="batchcalories" inputmode="decimal" min="0" step="1" placeholder="e.g. 1600 — divides by portions"></label>
    <div class="grid3">
     <label class="f" for="e-kcal">kcal<input type="text" inputmode="decimal" id="e-kcal" value="${esc(r.kcal)}"></label>
     <label class="f" for="e-p">Protein g<input type="text" inputmode="decimal" id="e-p" value="${esc(r.p)}"></label>

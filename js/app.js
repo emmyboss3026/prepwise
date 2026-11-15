@@ -842,7 +842,7 @@ main.addEventListener("click",e=>{
   else if(a==="pricedel"){if(b.dataset.confirm){savePriceLog(PWP.removeObs(priceLog(),b.dataset.id));toast("Deleted from price history");render()}else{b.dataset.confirm="1";b.textContent="Tap again"}}
   else if(a==="editlist"){S.editList=!S.editList;render()}
   else if(a==="rmitem"){const id=b.dataset.id;const st=S.settings;
-    if(ITEMS.some(i=>i[0]===id)){st.hiddenItems=(st.hiddenItems||[]).concat([id])}else{st.customItems=(st.customItems||[]).filter(c=>c.id!==id)}
+    if(ITEMS.some(i=>i[0]===id)){st.hiddenItems=(st.hiddenItems||[]).concat([id])}else{st.customItems=(st.customItems||[]).filter(c=>c.id!==id||(c.trip&&c.trip!==S.trip))}
     putSettings();toast("Removed from your list");render()}
   else if(a==="unhide"){S.settings.hiddenItems=[];putSettings();render()}
   else if(a==="open"||a==="gocook"){const id=b.dataset.id;go("cooking",()=>{S.recipe=id;S.scale=1;S.editRecipe=null})}
@@ -888,7 +888,7 @@ main.addEventListener("change",e=>{
   else if(a==="priceitem"){const w=$("#pr-name-wrap");if(w)w.hidden=el.value!=="__other";if(el.value==="__other"&&$("#pr-name"))$("#pr-name").focus()}
   else if(a==="logtrip"){S.logTrip=el.value;render()}
   else if(a==="estimate"){const p=PW.parseBudget(el.value);if(!p.ok||p.value==null||p.value>100000){toast("Enter an estimated price between €0 and €100,000");return}
-    const next=(S.settings.customItems||[]).map(c=>c.id===el.dataset.id?Object.assign({},c,{price:p.value}):c);S.settings.customItems=next;putSettings();render()}
+    const next=(S.settings.customItems||[]).map(c=>c.id===el.dataset.id&&(!c.trip||c.trip===S.trip)?Object.assign({},c,{price:p.value}):c);S.settings.customItems=next;putSettings();render()}
   else if(a==="paid"||a==="store"){const id=el.dataset.id;const r=Object.assign({status:"bought",paid:null,store:""},(S.items[S.trip]||{})[id]);
     if(a==="paid"){const n=num(el.value);r.paid=el.value.trim()===""||n==null?null:Math.round(n*100)/100}else r.store=el.value.trim().slice(0,60);
     putItem(S.trip,id,r);setTimeout(()=>keepFocus(()=>render()),0)}

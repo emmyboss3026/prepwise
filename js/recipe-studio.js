@@ -8,7 +8,7 @@
 "use strict";
 const MAX_TEXT=14000,MAX_LINES=150;
 const SECTION=/^(ingredients?|what you (?:need|will need)|method|instructions?|directions?|steps?|preparation|notes?|tips?)\s*:?\s*$/i;
-const ING_HEAD=/^(?:(\d+(?:[.,]\d+)?(?:\s*[-–]\s*\d+(?:[.,]\d+)?)?|\d+\s+\d+\/\d+|\d+\/\d+|[¼½¾⅓⅔⅛⅜⅝⅞])\s*)?(kg|g|grams?|ml|millilit(?:er|re)s?|l|lit(?:er|re)s?|tbsps?|tablespoons?|tsps?|teaspoons?|cups?|cans?|packs?|packets?|cloves?|slices?|pieces?|pcs?|whole|medium|small|large)?\b/i;
+const ING_HEAD=/^(?:(\d+\s+\d+\/\d+|\d+\/\d+|[¼½¾⅓⅔⅛⅜⅝⅞]|\d+(?:[.,]\d+)?(?:\s*[-–]\s*\d+(?:[.,]\d+)?)?)\s*)?(kg|g|grams?|ml|millilit(?:er|re)s?|l|lit(?:er|re)s?|tbsps?|tablespoons?|tsps?|teaspoons?|cups?|cans?|packs?|packets?|cloves?|slices?|pieces?|pcs?|whole|medium|small|large)?\b/i;
 const INSTRUCTION=/^(?:step\s*)?\d{1,2}[.)\-:]\s+|^[•\-\*]\s*/i;
 const ACTION=/\b(add|mix|stir|bake|cook|heat|boil|fry|chop|cut|grill|serve|blend|simmer|preheat|season|combine|drain|pour|whisk|spread|roast|saute|sauté|marinate|divide|portion|refrigerate|freeze|store)\b/i;
 const SLOTS=["breakfast","lunch","dinner","snack"];
@@ -56,7 +56,7 @@ function parse(text,options={}){
       continue;
     }
     // First standalone line is a proposed title only for formatted recipe texts with more content.
-    if(idx===0&&!name&&lines.length>1&&!/[\d.]/.test(line)&&line.length<65&&!ACTION.test(line)&&!ING_HEAD.test(line)){
+    if(idx===0&&!name&&lines.length>1&&!/[\d.]/.test(line)&&line.length<65&&!ACTION.test(line)&&!/^(?:\d|[¼½¾⅓⅔⅛⅜⅝⅞])/.test(line)){
       name=line.slice(0,80);continue;
     }
     if(mode==="ingredients"){

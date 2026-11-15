@@ -28,11 +28,11 @@ function boot(storedJson) {
     localStorage: { getItem: k => (k in store ? store[k] : null), setItem: (k, v) => { store[k] = String(v); }, get length() { return 0; }, key: () => null },
     matchMedia: () => ({ matches: false, addEventListener() {} }),
     setTimeout: () => 0, clearInterval() {}, setInterval: () => 0, addEventListener() {}, scrollTo() {},
-    navigator: {}, location: { origin: "http://x", pathname: "/" }
+    navigator: {}, location: { origin: "http://x", pathname: "/" }, URL: { revokeObjectURL() {}, createObjectURL: () => "blob:x" }, CSS: { escape: s => s }
   };
   ctx.window = ctx; ctx.self = ctx;
   vm.createContext(ctx);
-  for (const f of ["recipes.js", "js/core.js", "js/app.js"]) vm.runInContext(read(f), ctx, { filename: f });
+  for (const f of ["recipes.js", "js/core.js", "js/prices.js", "js/recs.js", "js/app.js"]) vm.runInContext(read(f), ctx, { filename: f });
   return ctx;
 }
 
@@ -48,7 +48,15 @@ function hostileState(td) {
       plan: { breakfast: Q, lunch: R },
       recipes: { evil: evilRecipe(P), [Q]: evilRecipe(R), Pancakes: { name: P, servingLabel: Q } },
       customItems: [{ id: Q, name: P, buy: R, price: P, store: Q }, { id: R, name: Q, buy: P, price: R, store: "NOPE" + P }],
-      hiddenItems: [P]
+      hiddenItems: [P], tripBudgets: { [td]: P, [P]: Q, x: R },
+      priceLog: [
+        { id: R, item: Q, name: P, store: R, total: 1, amount: Q, base: 1, unit: "kg", price: 1, date: td, cur: "EUR", promo: 0 },
+        { id: Q, item: Q, name: P, store: P, total: 2, amount: R, base: 1, unit: "kg", price: 2, date: td, cur: "EUR", promo: 1 },
+        { id: "c1", item: "chicken", name: P, store: "SPAR", total: 10, amount: "1 kg", base: 1, unit: "kg", price: 10, date: td, cur: "EUR", promo: 0 },
+        { id: "c2", item: "chicken", name: Q, store: P, total: 5, amount: "1 kg", base: 1, unit: "kg", price: 5, date: td, cur: "EUR", promo: 0 },
+        { id: "c3", item: "chicken", name: R, store: R, total: 6, amount: "1 kg", base: 1, unit: "kg", price: 6, date: td, cur: "EUR", promo: 0 }
+      ],
+      recExclude: [Q, 5], recStopCost: P
     },
     log: { [td]: { breakfast: { meal: P, eaten: true }, lunch: { meal: Q }, dinner: { meal: R, eaten: true }, extra: { kcal: Q } }, [P]: { dinner: { meal: R } } },
     weights: { [P]: 80, [td]: 81 }
@@ -71,6 +79,12 @@ function renderEverything() {
     for (const trip of [td, P]) { S.trip = trip; call(`shop ${group} edit=${editList} trip`, () => ctx.viewShop()); }
   }
   S.trip = td; S.editList = false;
+  S.pricesOpen = true; S.priceItem = Q;
+  call("shop prices open", () => ctx.viewShop());
+  call("shop recs", () => ctx.viewShop());
+  S.priceDraft = { itemKey: Q, itemName: P, other: true, store: R, total: P, amount: Q, date: Q, promo: true, id: R };
+  call("shop price draft", () => ctx.viewShop());
+  S.priceDraft = null; S.pricesOpen = false;
   call("meals", () => ctx.viewMeals());
   call("cooking list", () => { S.recipe = null; S.editRecipe = null; return ctx.viewCooking(); });
   for (const id of ["evil", Q, "Pancakes"]) {
@@ -94,6 +108,9 @@ test("the test really exercises the escaping (escaped payloads are present)", ()
   assert.ok(out.home.includes("&lt;b id=PWNA&gt;"), "display name should appear escaped on Home");
   assert.ok(out["cook day"].includes("&lt;b id=PWNA&gt;"), "email/recipe names should appear escaped");
   assert.ok(out["shop meal edit=true"].includes("&quot; autofocus onfocus=PWNB"), "custom item names should appear escaped");
+  assert.ok(out["shop prices open"].includes("&lt;b id=PWNA&gt;"), "price history names should appear escaped");
+  assert.ok(out["shop recs"].includes("&lt;b id=PWNA&gt;") && out["shop recs"].includes("extra stop"), "recommendation store names should appear escaped");
+  assert.ok(out["shop price draft"].includes("&quot; autofocus onfocus=PWNB"), "price form draft should appear escaped");
 });
 test("tampered data does not crash any view", () => {
   const threw = Object.keys(renderEverything()).filter(k => k.endsWith("THREW"));
@@ -105,9 +122,9 @@ test("toasts and status text use textContent, not innerHTML", () => {
   assert.match(app, /\$\("#si-msg"\)\.textContent=/);
 });
 test("every innerHTML assignment in app.js is accounted for", () => {
-  // Reviewed sinks: render() main, timers box, chart svg, theme icon. Adding a new one must be a conscious decision.
+  // Reviewed sinks: render() main, timers box, chart svg (2), theme icon, photo preview box. Adding a new one must be a conscious decision.
   const count = (read("js/app.js").match(/\.innerHTML\s*=/g) || []).length;
-  assert.equal(count, 5);
+  assert.equal(count, 6);
 });
 
 /* ---------- Prototype-key and numeric hardening in core.js ---------- */
@@ -134,4 +151,76 @@ test("mapCloud skips rows with prototype keys and non-numeric weights", () => {
   assert.equal(({}).x, undefined);
   assert.deepEqual(Object.keys(out.items["2026-11-06"]), ["eggs"]);
   assert.deepEqual(out.weights, { "2026-11-02": 80 });
+});
+
+/* ---------- Budget card (Prepwise 2.2) ---------- */
+test("budget card shows status from settings and ignores unparseable stored budgets", () => {
+  const td = today(), ctx = boot("{}"), S = vm.runInContext("S", ctx);
+  S.trip = td; S.editList = false; S.group = "store";
+  S.settings.tripBudgets = { [td]: 500 };
+  const html = String(ctx.viewShop());
+  assert.match(html, /id="trip-budget"[^>]*value="500"/);
+  assert.match(html, /under budget/);
+  S.settings.tripBudgets = { [td]: P };
+  const bad = String(ctx.viewShop());
+  assert.match(bad, /id="trip-budget"[^>]*value=""/);
+  assert.ok(!/over budget|under budget/.test(bad));
+});
+test("budget forecast excludes pantry items in the rendered card", () => {
+  const td = today(), ctx = boot("{}"), S = vm.runInContext("S", ctx);
+  S.trip = td; S.settings.tripBudgets = { [td]: 1000 };
+  const eur = vm.runInContext("eur", ctx), t = ctx.tripTotals(td); // left excludes PANTRY
+  const html = String(ctx.viewShop());
+  assert.ok(html.includes(eur(t.left) + " still to buy"));
+  assert.match(html, /Pantry items are not counted/);
+});
+
+/* ---------- Recommendations card (2.5) ---------- */
+test("recommendations card is honest: past prices, dates, no live-price claims, opt-out works", () => {
+  const td = today(), ctx = boot("{}"), S = vm.runInContext("S", ctx);
+  S.trip = td;
+  const noHist = String(ctx.viewShop());
+  assert.match(noHist, /No price history yet/);
+  S.settings.priceLog = [
+    { id: "a", item: "chicken", name: "Chicken", store: "SPAR / INTERSPAR", total: 10, amount: "1 kg", base: 1, unit: "kg", price: 10, date: td, cur: "EUR", promo: 0 },
+    { id: "b", item: "chicken", name: "Chicken", store: "HOFER", total: 5, amount: "1 kg", base: 1, unit: "kg", price: 5, date: td, cur: "EUR", promo: 0 }
+  ];
+  const html = String(ctx.viewShop());
+  assert.match(html, /Possible saving/);
+  assert.match(html, /not live shop prices/);
+  assert.match(html, /Price recorded/);
+  assert.match(html, /Some evidence/); // two entries, both from today: not high (needs 3), not low
+  assert.ok(!/live price|current price|in stock/i.test(html.replace(/not live shop prices/g, "")));
+  S.settings.recsOff = true;
+  const off = String(ctx.viewShop());
+  assert.match(off, /Recommendations are off/);
+  assert.ok(!/Possible saving/.test(off));
+});
+
+/* ---------- Local photo preview (2.3 first step) ---------- */
+test("photo preview: only JPG/PNG/WebP up to 5 MB are accepted; nothing else is guessed", () => {
+  const ctx = boot("{}");
+  const ok = { type: "image/jpeg", size: 1024, name: "a.jpg" };
+  assert.equal(ctx.photoProblem(ok), "");
+  assert.equal(ctx.photoProblem({ type: "image/webp", size: 5 * 1024 * 1024, name: "b.webp" }), "");
+  for (const bad of [{ type: "image/heic", size: 10 }, { type: "application/pdf", size: 10 }, { type: "image/svg+xml", size: 10 }, { type: "image/jpeg", size: 0 }, { type: "image/jpeg", size: 5 * 1024 * 1024 + 1 }, { type: "", size: 10 }])
+    assert.match(ctx.photoProblem(bad), /JPG, PNG or WebP/, JSON.stringify(bad));
+  assert.equal(ctx.photoProblem(null), "");
+});
+test("photo preview never touches storage or the network and is not linked to a saved price", () => {
+  const app = read("js/app.js");
+  const photoCode = app.slice(app.indexOf("/* Photo preview is local-only"), app.indexOf("function viewPrices"));
+  for (const w of ["localStorage", "fetch(", "sb.", "putSettings", "FileReader", "readAsDataURL", "canvas"]) assert.ok(!photoCode.includes(w), w);
+  assert.ok(!/photo|image/i.test(read("js/prices.js")), "price observations carry no photo field");
+  assert.match(app, /clearPricePhoto\(\);S\.priceDraft=null;S\.pricesOpen=true;S\.priceItem/, "successful save drops the preview");
+  assert.ok(!/capture=/.test(app), "file input must offer the gallery as well as the camera");
+});
+test("photo file name and object URL are escaped in the preview markup", () => {
+  const ctx = boot("{}");
+  vm.runInContext(`pricePhotoUrl='blob:x"><b id=PWNA>';pricePhotoName='<b id=PWNA>"';`, ctx);
+  const html = String(ctx.pricePhotoMarkup());
+  for (const bad of LEAKS) assert.ok(!html.includes(bad), bad);
+  assert.ok(html.includes("&lt;b id=PWNA&gt;"));
+  vm.runInContext("clearPricePhoto()", ctx);
+  assert.equal(String(ctx.pricePhotoMarkup()), "");
 });

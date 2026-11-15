@@ -5,6 +5,7 @@ Live: https://prepwise-plum.vercel.app (Vercel project `prepwise`, team slug `mk
 Plain static site, no build step:
 - `index.html` — page shell: icon sprite, header, tab bar, sign-in dialog
 - `styles.css` — design system (tokens, light/dark themes, components, motion)
+- `js/prices.js` — price history logic (unit normalisation, cheapest recorded store). No DOM, unit-tested
 - `js/core.js` — pure logic (dates, scaling, grocery totals, body maths, storage normalisation). No DOM; unit-tested
 - `js/app.js` — state, Supabase sync, all views and events
 - `recipes.js` — `window.DEFAULT_RECIPES`, the owner's six default recipes (guarded by a hash test)
@@ -33,6 +34,7 @@ Cook day (countdown to the 2-weekly Friday cook day, .ics export, chicken split,
   - `mp_settings (user_id pk, data jsonb, updated_at)` — body stats, plan, `recipes` overrides/custom meals, `customItems`, `hiddenItems`
   - `mp_log (user_id, day, slot 'breakfast'|'lunch'|'dinner'|'extra', meal, eaten, kcal, updated_at)` unique (user_id, day, slot)
   - `mp_weights (user_id, day, kg)` unique (user_id, day)
+- Price history (2.4) is stored in `settings.priceLog` inside `mp_settings.data` (and in localStorage when signed out): no new table. Capped at 1,500 entries; move to a dedicated table with a reviewed migration if that is ever too small. Prices are per user, never shared, and are the user's own confirmed records, not live shop prices.
 - Supabase Auth → URL Configuration → Redirect URLs must include the app URL (and http://localhost:3000 for local testing).
 
 ## Conventions
@@ -47,3 +49,4 @@ Cook day (countdown to the 2-weekly Friday cook day, .ics export, chicken split,
 ## Roadmap status
 Implemented (Phase 1): redesigned visual system with light/dark themes, home dashboard, skeleton loading, interactive weight chart, empty states, unit tests for date, scaling, grocery, persistence and migration logic.
 Planned, not built: recipe-driven grocery generation, adjustable servings across the whole plan, pantry inventory, meal calendar, recipe search and filters, freezer inventory, meal-prep history, data export and backup, CSP and SRI hardening, PWA/offline.
+Implemented (2.4): personal price history, per kg/litre/item normalisation, cheapest recorded store with price age. Planned: photo/receipt capture (2.3, needs approval for any paid OCR), store recommendations (2.5), recipe-driven grocery quantities.

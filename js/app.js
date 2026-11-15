@@ -115,7 +115,7 @@ try{matchMedia("(prefers-color-scheme: dark)").addEventListener("change",()=>{sy
 syncTheme();
 
 /* ---------- State & storage ---------- */
-const S={tab:"home",group:"store",shopFilter:"remaining",trip:tripOf(today()),logTrip:tripOf(today()),items:{},settings:{},log:{},weights:{},user:null,cloud:false,loading:false};
+const S={tab:"home",group:"store",shopFilter:"remaining",pinned:{},trip:tripOf(today()),logTrip:tripOf(today()),items:{},settings:{},log:{},weights:{},user:null,cloud:false,loading:false};
 let sb=null;
 try{if(window.supabase)sb=window.supabase.createClient(SB_URL,SB_KEY)}catch(e){sb=null}
 
@@ -196,7 +196,7 @@ function render(opt){
   if(S.tab==="progress")drawChart();
 }
 /* Switch section: render with a staggered entrance, reset scroll, move focus to the content for screen readers. */
-function go(tab,pre){S.tab=tab;if(pre)pre();render({enter:true});window.scrollTo(0,0);main.focus({preventScroll:true})}
+function go(tab,pre){if(tab!==S.tab){S.pinned={};clearPricePhoto()}S.tab=tab;if(pre)pre();render({enter:true});window.scrollTo(0,0);main.focus({preventScroll:true})}
 
 /* ---------- Home dashboard ---------- */
 const SLOT_RANK={breakfast:0,lunch:1,dinner:2,snack:3};
@@ -318,6 +318,7 @@ function itemRow(i,extra){
     <span class="acts">
       <button type="button" class="chip have" data-act="status" data-id="${esc(id)}" data-st="have" aria-pressed="${st==="have"}">I have it</button>
       <button type="button" class="chip" data-act="status" data-id="${esc(id)}" data-st="bought" aria-pressed="${st==="bought"}">Bought</button>
+      ${st==="bought"&&r.paid!=null?`<button type="button" class="chip" data-act="pricedraft" data-id="${esc(id)}">Add to price history</button>`:""}
     </span>
     ${st==="bought"?`<span class="pricefields">
       <input type="text" inputmode="decimal" id="paid-${esc(id)}" data-act="paid" data-id="${esc(id)}" placeholder="Paid €" aria-label="What you paid for ${esc(name)}" value="${r.paid==null||isNaN(Number(r.paid))?"":Number(r.paid).toFixed(2).replace(".",",")}">
@@ -325,6 +326,118 @@ function itemRow(i,extra){
       ${diff}</span>`:""}
   </li>`;
 }
+function budgetCard(t){
+  const budget=PW.parseBudget((S.settings.tripBudgets||{})[S.trip]).value;
+  const b=PW.budgetStatus(t.spent,t.left,budget);
+  return `<section class="card" aria-label="Shopping budget"><div class="row between"><h3>Trip budget</h3><label class="f" for="trip-budget">Budget (€)<input type="text" id="trip-budget" inputmode="decimal" data-act="tripbudget" value="${budget==null?"":esc(String(budget).replace(".",","))}" placeholder="Set budget" style="max-width:130px"></label></div>
+    <p class="muted small">Estimated checkout: ${eur(b.total)} · ${eur(t.spent)} purchased · ${eur(t.left)} still to buy. Pantry items are not counted.</p>
+    ${budget==null?"":`<p class="small" aria-live="polite"><strong>${b.over?eur(-b.diff)+" over budget":eur(b.diff)+" under budget"}</strong> based on the estimated total. Enter actual prices for more accuracy.</p><div class="bar${b.over?" offer":""}" role="img" aria-label="Estimated spending ${eur(b.total)} of ${eur(budget)} budget"><i style="--v:${Math.min(100,budget?b.total/budget*100:100).toFixed(1)}"></i></div>`}</section>`;
+}
+/* ---------- Price history (2.4) ---------- */
+const priceLog=()=>PWP.cleanLog(S.settings.priceLog);
+const shortName=n=>String(n).replace(/\s*\([^)]*\)\s*$/,"");
+const perUnit=u=>"/ "+PWP.UNIT_LABEL[u];
+const ageText=a=>a<=0?"today":a===1?"yesterday":a+" days ago";
+/* Typed store names match known ones ignoring case, so "hofer" and "HOFER" are one store. */
+const canonStore=t=>{const k=PWP.storeKey(t);return [...STORE_OPTS.map(o=>o[1]),...PWP.knownStores(priceLog())].find(n=>PWP.storeKey(n)===k)||String(t).trim()};
+function savePriceLog(log){S.settings.priceLog=log;putSettings()}
+/* Photo preview is local-only: no OCR, upload, image retention or inferred prices. */
+let pricePhotoUrl=null,pricePhotoName="";
+const PHOTO_TYPES=["image/jpeg","image/png","image/webp"],PHOTO_MAX=5*1024*1024;
+/* "" when the file is acceptable, otherwise the message to show. */
+function photoProblem(f){return !f?"":!PHOTO_TYPES.includes(f.type)||f.size===0||f.size>PHOTO_MAX?"Use a JPG, PNG or WebP image up to 5 MB":""}
+function clearPricePhoto(){if(pricePhotoUrl)URL.revokeObjectURL(pricePhotoUrl);pricePhotoUrl=null;pricePhotoName=""}
+function pricePhotoMarkup(){return pricePhotoUrl?`<figure><img class="price-photo-preview" src="${esc(pricePhotoUrl)}" alt="Preview of your selected product or receipt"><figcaption class="small">${esc(pricePhotoName)} · preview only</figcaption></figure><button class="chip" type="button" data-act="pricephotoclear">Remove preview</button>`:""}
+function refreshPricePhoto(){const box=$("#price-photo-display");if(box)box.innerHTML=pricePhotoMarkup()}
+function viewPricePhoto(){return `<div class="price-photo-box"><label class="f" for="pr-photo">Optional product or receipt photo (preview only)<input id="pr-photo" type="file" data-act="pricephoto" accept="image/jpeg,image/png,image/webp" aria-describedby="pr-photo-help"></label><p class="muted small" id="pr-photo-help">Your photo stays on this device and is not uploaded or saved. Enter the price and store manually; no image recognition is performed.</p><div id="price-photo-display" aria-live="polite">${pricePhotoMarkup()}</div></div>`}
+function viewPrices(){
+  const log=priceLog(),td=today(),d=S.priceDraft||null,open=!!S.pricesOpen||!!d;
+  let h=`<section class="card" aria-labelledby="h-prices"><div class="row between"><h3 id="h-prices">${ic("trend")}Price history</h3><button class="chip" type="button" data-act="pricestoggle" aria-expanded="${open}" aria-controls="prices-body">${open?"Hide":"Show"} · ${log.length}</button></div>`;
+  if(!open)return h+`<p class="muted small">Prices you confirm here are compared per kg, litre or item. They are your own records, not live shop prices.</p></section>`;
+  h+=`<div id="prices-body" style="display:flex;flex-direction:column;gap:14px"><p class="muted small">Your own confirmed purchases. Amounts are compared per kg, litre or item, and only for the same product. Dates show how old each price is; a past price is not today's price.</p>`;
+  const all=items(),sel=d?(d.other?"__other":d.itemKey):"";
+  h+=`<form data-form="price" class="grid2" novalidate>
+    <label class="f" for="pr-item" style="grid-column:1/-1">Product<select id="pr-item" data-act="priceitem" required><option value="" ${sel===""?"selected":""} disabled>Choose a product</option>${all.map(i=>`<option value="${esc(i[0])}" ${sel===i[0]?"selected":""}>${esc(shortName(i[2]))}</option>`).join("")}<option value="__other" ${sel==="__other"?"selected":""}>Other product…</option></select></label>
+    <label class="f" for="pr-name" id="pr-name-wrap" style="grid-column:1/-1" ${sel==="__other"?"":"hidden"}>Product name<input type="text" id="pr-name" maxlength="80" value="${esc(d&&d.other?d.itemName:"")}" placeholder="e.g. Greek yogurt 1 kg"></label>
+    <label class="f" for="pr-store">Store<input type="text" id="pr-store" list="pr-stores" maxlength="60" value="${esc(d?d.store:"")}" placeholder="e.g. HOFER" autocomplete="off"></label>
+    <datalist id="pr-stores">${[...new Set(STORE_OPTS.filter(o=>o[0]!=="PANTRY").map(o=>o[1]).concat(PWP.knownStores(log)))].map(s=>`<option value="${esc(s)}">`).join("")}</datalist>
+    <label class="f" for="pr-total">Total paid, €<input type="text" id="pr-total" inputmode="decimal" value="${esc(d?d.total:"")}" placeholder="2,49" required></label>
+    <label class="f" for="pr-amount">Amount bought<input type="text" id="pr-amount" value="${esc(d?d.amount:"")}" placeholder="550 g, 1 L, 6" required aria-describedby="pr-amt-help"></label>
+    <label class="f" for="pr-date">Date<input type="date" id="pr-date" value="${esc(d?d.date:td)}" max="${td}" required></label>
+    <label class="f" style="flex-direction:row;align-items:center;gap:8px;grid-column:1/-1"><input type="checkbox" id="pr-promo" ${d&&d.promo?"checked":""}> On offer or multi-buy price</label>
+    ${viewPricePhoto()}
+    <p class="muted small" id="pr-amt-help" style="grid-column:1/-1">Amount: g, kg, ml, cl, dl, L, or a plain count. Kg and litres are never converted into each other.</p>
+    <p class="small" id="pr-msg" role="alert" style="grid-column:1/-1;color:var(--offer)"></p>
+    <div class="row" style="grid-column:1/-1"><button class="btn" type="submit">${d&&d.id?"Save changes":"Add to history"}</button>${d?`<button class="btn ghost" type="button" data-act="pricecancel">Cancel</button>`:""}</div></form>`;
+  const prods=PWP.products(log);
+  if(!prods.length)h+=`<div class="empty"><span class="art">${ic("trend")}</span><b>No prices yet</b><span class="small">After you mark something Bought with a price, tap “Add to price history” on that row. Or add a purchase above.</span></div>`;
+  prods.forEach(p=>{
+    const groups=PWP.compareItem(log,p.item,td),openP=S.priceItem===p.item;
+    h+=`<div class="group"><div class="ghead"><h3 style="font-size:1rem">${esc(shortName(p.name))}</h3><span class="gtot">${p.count} ${p.count===1?"entry":"entries"}</span></div>`;
+    groups.forEach(g=>{
+      const lr=g.lowestRegular,lp=g.lowestPromo;
+      h+=`<p class="small">${lr?`<b>Lowest recorded: ${eur(lr.price)} ${perUnit(g.unit)}</b>${lr.store?" at "+esc(lr.store):" (store not recorded)"}<span class="meta">Recorded ${fmtDate(lr.date,{day:"numeric",month:"short",year:"numeric"})}, ${ageText(lr.age)}. ${lr.stale?`<b style="color:var(--offer)">Old price: check before relying on it.</b> `:""}Your record, not a current shop price.</span>`:`<span class="muted">No regular-price entries per ${PWP.UNIT_LABEL[g.unit]} yet.</span>`}
+        ${g.cheapestStore&&g.stores.length>1?`<span class="meta">By store: ${g.stores.map(s=>esc(s.store)+" "+eur(s.price)).join(" · ")}</span>`:""}
+        ${lp?`<span class="meta"><span class="tag offer">On offer</span> ${eur(lp.price)} ${perUnit(g.unit)}${lp.store?" at "+esc(lp.store):""}, ${fmtDate(lp.date,{day:"numeric",month:"short"})}. Offers are kept out of the lowest price.</span>`:""}
+        ${g.outliers.size?`<span class="meta"><span class="tag offer">Check</span> ${g.outliers.size} unusual ${g.outliers.size===1?"price is":"prices are"} left out (far from the typical ${eur(g.median)} ${perUnit(g.unit)}).</span>`:""}</p>`;
+    });
+    h+=`<button class="chip" type="button" data-act="priceprod" data-item="${esc(p.item)}" aria-expanded="${openP}">${openP?"Hide entries":"Show entries"}</button>`;
+    if(openP){
+      const out=new Set(groups.flatMap(g=>[...g.outliers]));
+      h+=`<ul>${log.filter(o=>o.item===p.item).sort((a,b)=>a.date<b.date?1:a.date>b.date?-1:0).map(o=>`<li class="item"><span><span class="name">${esc(o.store||"Store not recorded")} · ${fmtDate(o.date,{day:"numeric",month:"short",year:"numeric"})}</span><span class="meta">${eur(o.total)} for ${esc(o.amount)} = ${eur(o.price)} ${perUnit(o.unit)}${o.promo?' <span class="tag offer">On offer</span>':""}${out.has(o.id)?' <span class="tag offer">Unusual</span>':""}</span></span>
+        <span class="acts"><button class="chip" type="button" data-act="priceedit" data-id="${esc(o.id)}" aria-label="Edit ${esc(shortName(o.name))} at ${esc(o.store||"unknown store")} on ${fmtDate(o.date)}">Edit</button><button class="chip" type="button" data-act="pricedel" data-id="${esc(o.id)}" aria-label="Delete ${esc(shortName(o.name))} at ${esc(o.store||"unknown store")} on ${fmtDate(o.date)}">Delete</button></span></li>`).join("")}</ul>`;
+    }
+    h+=`</div>`;
+  });
+  return h+`</div></section>`;
+}
+function readPriceForm(){
+  const sel=$("#pr-item").value,other=sel==="__other",it=items().find(i=>i[0]===sel);
+  return {itemKey:other?"":sel,itemName:other?$("#pr-name").value:(it?shortName(it[2]):""),store:$("#pr-store").value,total:$("#pr-total").value,amount:$("#pr-amount").value,date:$("#pr-date").value,promo:$("#pr-promo").checked,id:(S.priceDraft||{}).id};
+}
+function submitPrice(){
+  const f=readPriceForm();f.store=canonStore(f.store);const r=PWP.makeObs(f,today(),"p-"+Date.now().toString(36)+Math.random().toString(36).slice(2,6));
+  if(!r.ok){$("#pr-msg").textContent=r.error;return}
+  const u=PWP.upsertObs(priceLog(),r.obs);
+  if(!u.ok){$("#pr-msg").textContent=u.error;return}
+  savePriceLog(u.log);clearPricePhoto();S.priceDraft=null;S.pricesOpen=true;S.priceItem=r.obs.item;toast(f.id?"Price updated":"Added to price history");render();
+}
+
+/* ---------- Store recommendations (2.5) ---------- */
+const storeLabel=k=>(STORE_OPTS.find(o=>o[0]===k)||[k,k])[1];
+const CONF_TEXT={high:"Strong evidence",medium:"Some evidence",low:"Weak evidence"};
+function recItem(i){
+  const base=i.baselinePrice!=null?` vs ${eur(i.baselinePrice)} ${perUnit(i.unit)} at ${esc(i.plannedStore)} (your plan)`:"";
+  return `<li class="item"><span><span class="name">${esc(i.name)}</span>
+    <span class="meta">${eur(i.price)} ${perUnit(i.unit)} at ${esc(i.store)}${base}</span>
+    <span class="meta">About ${Math.round(i.qty*100)/100} ${PWP.UNIT_LABEL[i.unit]==="item"?(i.qty===1?"item":"items"):PWP.UNIT_LABEL[i.unit]} (your last purchase) is roughly ${eur(i.estCost)}. Price recorded ${fmtDate(i.date,{day:"numeric",month:"short",year:"numeric"})}, ${ageText(i.age)}.${i.stale?" <b>Old price: check before relying on it.</b>":""}</span>
+    <span class="meta"><span class="tag${i.confidence==="low"?" offer":""}">${CONF_TEXT[i.confidence]}</span> ${i.entries} recorded ${i.entries===1?"price":"prices"}</span></span>
+    ${i.saving>0?`<span class="price">−${eur(i.saving)}<small>possible saving</small></span>`:`<span></span>`}</li>`;
+}
+function viewRecs(){
+  const off=!!S.settings.recsOff;
+  let h=`<section class="card" aria-labelledby="h-recs"><div class="row between"><h3 id="h-recs">${ic("cart")}Where to shop next</h3><button class="chip" type="button" data-act="recstoggle" aria-pressed="${!off}">${off?"Off":"On"}</button></div>`;
+  if(off)return h+`<p class="muted small">Recommendations are off. Your price history is kept and nothing is shared.</p></section>`;
+  const log=priceLog(),cur=S.items[S.trip]||{};
+  h+=`<p class="muted small">Based only on prices you recorded yourself. These are past prices, not live shop prices: check the shelf before you rely on them.</p>`;
+  if(!log.length)return h+`<div class="empty"><span class="art">${ic("cart")}</span><b>No price history yet</b><span class="small">Record a few purchases in Price history below. Suggestions appear here once you have prices from more than one store.</span></div></section>`;
+  const remaining=items().filter(i=>i[1]!=="PANTRY"&&!(cur[i[0]]||{}).status).map(i=>({id:i[0],name:shortName(i[2]),store:storeLabel(i[1])}));
+  const stopCost=PW.parseBudget(S.settings.recStopCost).value||0,exclude=Array.isArray(S.settings.recExclude)?S.settings.recExclude.filter(x=>typeof x==="string"):[];
+  const r=PWR.recommend(remaining,{log,today:today(),exclude,stopCost});
+  const n=r.stops.reduce((a,s)=>a+s.items.length,0);
+  h+=`<p aria-live="polite">${n?`<b>Possible saving: ${eur(r.totalSaving)}</b> across ${n} ${n===1?"item":"items"}, if prices are unchanged.${r.weakSaving>0?` A further ${eur(r.weakSaving)} rests on weak evidence and is not counted.`:""}`:`No cheaper store found in your records for the items still to buy.`}<span class="meta">Covers ${r.covered} of ${r.total} items still to buy. The rest have no recorded price at a store you consider.</span></p>`;
+  r.stops.forEach(s=>{h+=`<div class="group"><div class="ghead"><h3 style="font-size:1rem">${esc(s.store)}${s.optional?' <span class="tag">extra stop</span>':""}</h3><span class="gtot">save ${eur(s.saving)}</span></div><ul>${s.items.map(recItem).join("")}</ul></div>`});
+  if(r.staying.length)h+=`<p class="small muted">${r.staying.length} ${r.staying.length===1?"item is":"items are"} already cheapest at your planned store, or the difference is under ${eur(PWR.MIN_SAVING)}.</p>`;
+  if(r.noBaseline.length)h+=`<div class="group"><div class="ghead"><h3 style="font-size:1rem">No saving estimate</h3></div><p class="small muted">You have no recorded price at the store in your plan, so a saving cannot be worked out. Cheapest recorded:</p><ul>${r.noBaseline.map(recItem).join("")}</ul></div>`;
+  const stores=PWP.knownStores(log);
+  h+=`<div class="group"><div class="ghead"><h3 style="font-size:1rem">Your preferences</h3></div>
+    <label class="f" for="rec-stop">Cost of an extra stop, € (travel, time)<input type="text" id="rec-stop" inputmode="decimal" data-act="recstop" value="${stopCost?esc(String(stopCost).replace(".",",")):""}" placeholder="0" style="max-width:130px"></label>
+    <p class="small muted">A store you do not already visit is only suggested if it saves more than this.</p>
+    ${stores.length?`<div role="group" aria-label="Stores to consider" class="chips">${stores.map(s=>`<button type="button" class="chip" data-act="recstore" data-store="${esc(s)}" aria-pressed="${!exclude.some(x=>PWP.storeKey(x)===PWP.storeKey(s))}">${esc(s)}</button>`).join("")}</div><p class="small muted">Untick a store you will not shop at.</p>`:""}</div>`;
+  h+=`<details><summary class="small">How this is worked out</summary><p class="small muted">For each item still to buy, Prepwise takes the lowest regular price you recorded at each store (offers and unusual prices are ignored), multiplies it by the amount you bought last time, and compares it with your recorded price at the store in your plan. No saving is shown without that recorded price. Nothing is fetched from any shop, and your records stay in your own account.</p></details></section>`;
+  return h;
+}
+
 function viewShop(){
   const t=tripTotals(S.trip);const cur=tripOf(today());const all=items();const ed=S.editList;
   let html=`<section class="row between"><div><h2>Grocery list</h2><p class="muted small">${ed?"Editing your list":"Everything you need for this two-week prep"}</p></div>
@@ -335,6 +448,7 @@ function viewShop(){
     <div class="stat spent"><b>${t.est?"~":""}${eur(t.spent)}</b><span>Spent</span></div>
     <div class="stat"><b>${eur(t.left)}</b><span>Still to buy</span></div>
   </section>
+  ${budgetCard(t)}
   <section class="card" aria-label="Shopping completion">
     ${(()=>{const recs=S.items[S.trip]||{};const needed=all.filter(i=>recs[i[0]]?.status!=="have");const bought=needed.filter(i=>recs[i[0]]?.status==="bought").length;const remaining=needed.length-bought;const pct=needed.length?Math.round(100*bought/needed.length):100;return `<div class="row between"><h3>Shopping progress</h3><strong>${pct}% complete</strong></div><progress value="${bought}" max="${needed.length||1}" style="width:100%;accent-color:var(--accent,#23865a)" aria-label="Groceries purchased"></progress><p class="muted small" aria-live="polite">${bought} bought · ${remaining} left to buy · ${all.length-needed.length} already at home</p>`})()}
   </section>
@@ -356,7 +470,7 @@ function viewShop(){
       ${(S.settings.hiddenItems||[]).length?`<p class="small muted">${S.settings.hiddenItems.length} of my default items are hidden. <button class="chip" type="button" data-act="unhide">Show them again</button></p>`:""}</section>`;
   }
   if(!ed)html+=`<div class="row between"><div class="seg" role="group" aria-label="Show groceries"><button type="button" data-act="shopfilter" data-filter="remaining" aria-pressed="${S.shopFilter==="remaining"}">Remaining</button><button type="button" data-act="shopfilter" data-filter="all" aria-pressed="${S.shopFilter==="all"}">All</button><button type="button" data-act="shopfilter" data-filter="bought" aria-pressed="${S.shopFilter==="bought"}">Bought</button></div></div>`;
-  const visible=ed?all:all.filter(i=>{const status=(S.items[S.trip]||{})[i[0]]?.status;return S.shopFilter==="all"||(S.shopFilter==="bought"?status==="bought":!status)});
+  const visible=ed?all:all.filter(i=>{const status=(S.items[S.trip]||{})[i[0]]?.status;return S.shopFilter==="all"||S.pinned[i[0]]||(S.shopFilter==="bought"?status==="bought":!status)}); // pinned: a row you just tapped stays put so you can enter its price
   if(!ed&&!visible.length)html+=`<section class="card"><p class="muted">No items in this view. Choose All to see your full list.</p></section>`;
   const rowFor=(i,extra)=>ed?`<li class="item"><span><span class="name">${esc(i[2])}</span><span class="meta">${esc(i[3])} · ${eur(i[4])}</span></span><span class="price"><button class="chip" type="button" data-act="rmitem" data-id="${esc(i[0])}" aria-label="Remove ${esc(i[2])}">Remove</button></span></li>`:itemRow(i,extra);
   if(S.group==="store"){
@@ -384,6 +498,7 @@ function viewShop(){
     html+=`</tbody></table></div><p class="muted small">“vs plan” compares what you spent with my planned total minus what you already had.</p></section>`;
   }
   if(!trips.length&&!ed)html+=`<section class="card"><div class="empty"><span class="art">${ic("cart")}</span><b>Your spending history starts here</b><span class="small">Mark items as bought and add what you paid. Each trip is saved so you can compare against your plan.</span></div></section>`;
+  if(!ed)html+=viewRecs()+viewPrices();
   if(!ed)html+=`<section class="row"><button class="btn danger" type="button" data-act="reset">Reset this trip</button></section>`;
   return html;
 }
@@ -582,14 +697,29 @@ document.querySelector("nav.tabs").addEventListener("click",e=>{const b=e.target
 const main=$("#main");
 main.addEventListener("click",e=>{
   const b=e.target.closest("[data-act]");if(!b||b.tagName==="SELECT"||b.tagName==="INPUT")return;const a=b.dataset.act;
-  if(a==="status"){const id=b.dataset.id,st=b.dataset.st;const r=Object.assign({status:"",paid:null,store:""},(S.items[S.trip]||{})[id]);
+  if(a==="status"){const id=b.dataset.id,st=b.dataset.st;S.pinned[id]=1;const r=Object.assign({status:"",paid:null,store:""},(S.items[S.trip]||{})[id]);
     r.status=r.status===st?"":st;if(r.status!=="bought"){r.paid=null;r.store=""}putItem(S.trip,id,r);keepFocus(()=>render(),b.id||null,`[data-act=status][data-id="${id}"][data-st="${st}"]`)}
   else if(a==="group"){S.group=b.dataset.g;render()}
-  else if(a==="shopfilter"){S.shopFilter=["remaining","all","bought"].includes(b.dataset.filter)?b.dataset.filter:"remaining";render()}
+  else if(a==="shopfilter"){S.shopFilter=["remaining","all","bought"].includes(b.dataset.filter)?b.dataset.filter:"remaining";S.pinned={};render()}
   else if(a==="reset"){if(b.dataset.confirm){clearTrip(S.trip);toast("Trip cleared");render()}else{b.dataset.confirm="1";b.textContent="Tap again to clear every tick and price"}}
   else if(a==="eat"){const d=b.dataset.day,sl=b.dataset.slot;const x=Object.assign({},(S.log[d]||{})[sl]);x.eaten=!x.eaten;x.meal=b.dataset.meal;putLog(d,sl,x);keepFocus(()=>render(),null,`[data-act=eat][data-day="${d}"][data-slot="${sl}"]`)}
   else if(a==="delw"){putWeight(b.dataset.day,null);render()}
   else if(a==="ics")downloadIcs();
+  else if(a==="recstoggle"){S.settings.recsOff=!S.settings.recsOff;putSettings();keepFocus(()=>render(),null,"[data-act=recstoggle]")}
+  else if(a==="recstore"){const k=PWP.storeKey(b.dataset.store),ex=(Array.isArray(S.settings.recExclude)?S.settings.recExclude:[]).filter(x=>typeof x==="string");
+    S.settings.recExclude=ex.some(x=>PWP.storeKey(x)===k)?ex.filter(x=>PWP.storeKey(x)!==k):ex.concat([b.dataset.store]);putSettings();
+    keepFocus(()=>render(),null,`[data-act=recstore][data-store="${CSS.escape(b.dataset.store)}"]`)}
+  else if(a==="pricestoggle"){S.pricesOpen=!S.pricesOpen;if(!S.pricesOpen){S.priceDraft=null;clearPricePhoto()}render()}
+  else if(a==="priceprod"){const it=b.dataset.item;S.priceItem=S.priceItem===it?null:it;S.pricesOpen=true;keepFocus(()=>render(),null,`[data-act=priceprod][data-item="${CSS.escape(it)}"]`)}
+  else if(a==="pricecancel"){clearPricePhoto();S.priceDraft=null;render()}
+  else if(a==="pricephotoclear"){clearPricePhoto();const inp=$("#pr-photo");if(inp)inp.value="";refreshPricePhoto()}
+  else if(a==="pricedraft"){const id=b.dataset.id,it=items().find(i=>i[0]===id),r=(S.items[S.trip]||{})[id]||{};
+    S.priceDraft={itemKey:id,itemName:it?shortName(it[2]):"",store:r.store||"",total:r.paid==null?"":String(r.paid).replace(".",","),amount:"",date:today(),promo:false};S.pricesOpen=true;render();
+    const h=$("#h-prices");if(h)h.scrollIntoView({block:"start"});const am=$("#pr-amount");if(am)am.focus()}
+  else if(a==="priceedit"){const o=priceLog().find(x=>x.id===b.dataset.id);if(!o)return;const known=items().some(i=>i[0]===o.item);
+    S.priceDraft={id:o.id,itemKey:known?o.item:"",other:!known,itemName:o.name,store:o.store,total:String(o.total).replace(".",","),amount:o.amount,date:o.date,promo:!!o.promo};S.pricesOpen=true;render();
+    const h=$("#h-prices");if(h)h.scrollIntoView({block:"start"});const am=$("#pr-amount");if(am)am.focus()}
+  else if(a==="pricedel"){if(b.dataset.confirm){savePriceLog(PWP.removeObs(priceLog(),b.dataset.id));toast("Deleted from price history");render()}else{b.dataset.confirm="1";b.textContent="Tap again"}}
   else if(a==="editlist"){S.editList=!S.editList;render()}
   else if(a==="rmitem"){const id=b.dataset.id;const st=S.settings;
     if(ITEMS.some(i=>i[0]===id)){st.hiddenItems=(st.hiddenItems||[]).concat([id])}else{st.customItems=(st.customItems||[]).filter(c=>c.id!==id)}
@@ -614,11 +744,19 @@ main.addEventListener("click",e=>{
 });
 main.addEventListener("change",e=>{
   const el=e.target,a=el.dataset.act;if(!a)return;
-  if(a==="trip"){S.trip=el.value;render()}
+  if(a==="trip"){S.trip=el.value;S.pinned={};render()}
+  else if(a==="recstop"){const p=PW.parseBudget(el.value);if(!p.ok||p.value>100){toast("Enter an extra-stop cost from €0 to €100");render();return}
+    if(p.value==null||p.value===0)delete S.settings.recStopCost;else S.settings.recStopCost=p.value;putSettings();setTimeout(()=>keepFocus(()=>render()),0)}
+  else if(a==="pricephoto"){const file=el.files&&el.files[0];clearPricePhoto();if(!file){refreshPricePhoto();return}
+    const bad=photoProblem(file);if(bad){toast(bad);el.value="";refreshPricePhoto();return}
+    pricePhotoUrl=URL.createObjectURL(file);pricePhotoName=file.name.slice(0,80);refreshPricePhoto()}
+  else if(a==="priceitem"){const w=$("#pr-name-wrap");if(w)w.hidden=el.value!=="__other";if(el.value==="__other"&&$("#pr-name"))$("#pr-name").focus()}
   else if(a==="logtrip"){S.logTrip=el.value;render()}
   else if(a==="paid"||a==="store"){const id=el.dataset.id;const r=Object.assign({status:"bought",paid:null,store:""},(S.items[S.trip]||{})[id]);
     if(a==="paid"){const n=num(el.value);r.paid=el.value.trim()===""||n==null?null:Math.round(n*100)/100}else r.store=el.value.trim().slice(0,60);
     putItem(S.trip,id,r);setTimeout(()=>keepFocus(()=>render()),0)}
+  else if(a==="tripbudget"){const p=PW.parseBudget(el.value);if(!p.ok){toast("Enter a budget from €0 to €100,000");render();return}
+    const tb=Object.assign({},S.settings.tripBudgets);if(p.value==null)delete tb[S.trip];else tb[S.trip]=p.value;S.settings.tripBudgets=tb;putSettings();setTimeout(()=>keepFocus(()=>render()),0)}
   else if(a==="setting"){S.settings[el.dataset.k]=el.value;putSettings();setTimeout(()=>keepFocus(()=>render()),0)}
   else if(a==="logmeal"){const d=el.dataset.day,sl=el.dataset.slot||"dinner";const x=Object.assign({},(S.log[d]||{})[sl]);x.meal=el.value;putLog(d,sl,x);render()}
   else if(a==="plan"){S.settings.plan=Object.assign({},S.settings.plan,{[el.dataset.k]:el.value});putSettings();render()}
@@ -631,6 +769,7 @@ main.addEventListener("submit",e=>{
     const c={id:"u-"+Date.now().toString(36),name:name.slice(0,80),buy:$("#ni-buy").value.trim().slice(0,40),price:num($("#ni-price").value)||0,store:$("#ni-store").value,imageUrl:safeGroceryImageUrl($("#ni-image").value.trim())};
     S.settings.customItems=(S.settings.customItems||[]).concat([c]);putSettings();toast("Added to your list");render();return}
   if(fm==="recipe"){e.preventDefault();saveRecipe();return}
+  if(fm==="price"){e.preventDefault();submitPrice();return}
   if(fm!=="weight")return;e.preventDefault();
   const d=$("#wday").value,kg=num($("#wkg").value);if(!d||!kg||kg<30||kg>300){toast("Enter a weight between 30 and 300 kg");return}
   putWeight(d,Math.round(kg*10)/10);

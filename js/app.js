@@ -402,7 +402,7 @@ function viewPhotoPicker(){
     <p class="small muted">Photos come from Wikimedia Commons. Generic food photographs may not match the exact brand or package. Review the picture before selecting it; licensing details are linked below each result. Searching shares the product name with Wikimedia.</p>
     <form data-form="photosearch" class="row"><label class="f" for="photo-search">Search photographs<input id="photo-search" maxlength="80" value="${esc(photoSearchTerm)}"></label><button class="btn" type="submit">Search</button></form>
     <div class="photo-choice-grid" id="photo-options" aria-live="polite">${photoCandidateList()}</div>
-    <details class="barcode-lookup"><summary>Find the exact package using its barcode</summary>
+    <details class="barcode-lookup" ${barcodeCandidate||barcodeError||barcodeLoading?"open":""}><summary>Find the exact package using its barcode</summary>
     <p class="small muted">This searches Open Food Facts only when you ask. A barcode identifies a specific product; photographs may be missing or outdated. No price or availability claims are made.</p>
     <form class="row" data-form="barcodelookup"><label class="f" for="product-barcode">Product barcode<input id="product-barcode" type="text" inputmode="numeric" pattern="[0-9\\s-]{8,22}" autocomplete="off" placeholder="Scan or type the digits" maxlength="22"></label><button class="btn" type="submit">Find package</button></form>
     <div id="barcode-match-anchor" aria-live="polite">${barcodePreview()}</div>

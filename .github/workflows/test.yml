@@ -1,0 +1,29 @@
+name: Prepwise quality checks
+on:
+  pull_request:
+    paths:
+      - "js/**"
+      - "tests/**"
+      - "index.html"
+      - "styles.css"
+      - ".github/workflows/test.yml"
+  push:
+    branches:
+      - feat/product-visual-thumbnails
+jobs:
+  unit-and-static:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: JavaScript syntax
+        run: |
+          node --check js/core.js
+          node --check js/app.js
+          node --check js/photos.js
+      - name: Unit, security and structural tests
+        run: node --test tests/*.test.js

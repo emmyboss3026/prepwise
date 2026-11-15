@@ -357,3 +357,13 @@ dialog::backdrop{background:rgb(10 20 14 / .5)}
 .price-photo-box figure{margin:10px 0;display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap}
 .price-photo-preview{width:min(100%,240px);height:180px;object-fit:contain;background:var(--surface);border:1px solid var(--line);border-radius:12px}
 .price-photo-box figcaption{overflow-wrap:anywhere;max-width:100%}
+
+/* Exact-packaging match from a user-entered barcode */
+.barcode-lookup{margin:12px 0;padding:14px;border:1px solid var(--line);border-radius:var(--r);background:var(--surface2)}
+.barcode-lookup>summary{cursor:pointer;font-weight:700;color:var(--fg);padding:6px 0}
+.barcode-lookup form.row{align-items:end;flex-wrap:wrap;gap:10px;margin-top:8px}
+.barcode-lookup form.row label{flex:1 1 160px;min-width:0}
+.barcode-match{display:flex;align-items:flex-start;gap:14px;padding:12px 0;overflow-wrap:anywhere}
+.barcode-match img{width:116px;height:138px;object-fit:contain;flex:0 0 116px;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
+.barcode-match>div{flex:1;min-width:0}
+@media(max-width:360px){.barcode-match{flex-direction:column}.barcode-match img{height:120px;width:100%;flex-basis:auto}}

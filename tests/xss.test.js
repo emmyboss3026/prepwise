@@ -32,7 +32,7 @@ function boot(storedJson) {
   };
   ctx.window = ctx; ctx.self = ctx;
   vm.createContext(ctx);
-  for (const f of ["recipes.js", "js/core.js", "js/prices.js", "js/recs.js", "js/app.js"]) vm.runInContext(read(f), ctx, { filename: f });
+  for (const f of ["recipes.js", "js/core.js", "js/prices.js", "js/recs.js", "js/photos.js", "js/app.js"]) vm.runInContext(read(f), ctx, { filename: f });
   return ctx;
 }
 
@@ -122,9 +122,9 @@ test("toasts and status text use textContent, not innerHTML", () => {
   assert.match(app, /\$\("#si-msg"\)\.textContent=/);
 });
 test("every innerHTML assignment in app.js is accounted for", () => {
-  // Reviewed sinks: render() main, timers box, chart svg (2), theme icon, photo preview box. Adding a new one must be a conscious decision.
+  // Reviewed sinks: render() main, timers box, chart svg (2), theme icon, price-photo preview box, Commons photo chooser (2). Adding a new one must be a conscious decision.
   const count = (read("js/app.js").match(/\.innerHTML\s*=/g) || []).length;
-  assert.equal(count, 6);
+  assert.equal(count, 8);
 });
 
 /* ---------- Prototype-key and numeric hardening in core.js ---------- */

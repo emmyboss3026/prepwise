@@ -742,6 +742,8 @@ main.addEventListener("click",e=>{
   else if(a==="signin")openSignin();
   else if(a==="signout"){sb.auth.signOut()}
 });
+// a custom image that fails to load is removed so the illustration underneath shows (error events do not bubble, hence capture)
+main.addEventListener("error",e=>{if(e.target&&e.target.matches&&e.target.matches(".grocery-thumb img"))e.target.remove()},true);
 main.addEventListener("change",e=>{
   const el=e.target,a=el.dataset.act;if(!a)return;
   if(a==="trip"){S.trip=el.value;S.pinned={};render()}

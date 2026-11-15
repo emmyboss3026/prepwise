@@ -59,3 +59,6 @@ test("user data is rendered through esc() in the new dashboard", () => {
 test("styles: the hidden attribute always wins over component display rules", () => {
   assert.match(css, /\[hidden\]\{display:none!important\}/);
 });
+test("a failed custom product image is removed so the illustration shows", () => {
+  assert.match(app, /addEventListener\("error",.*\.grocery-thumb img.*,true\)/);
+});

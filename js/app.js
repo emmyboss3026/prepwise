@@ -296,6 +296,7 @@ function itemRow(i,extra){
     <span class="acts">
       <button type="button" class="chip have" data-act="status" data-id="${esc(id)}" data-st="have" aria-pressed="${st==="have"}">I have it</button>
       <button type="button" class="chip" data-act="status" data-id="${esc(id)}" data-st="bought" aria-pressed="${st==="bought"}">Bought</button>
+      ${st==="bought"&&r.paid!=null?`<button type="button" class="chip" data-act="pricedraft" data-id="${esc(id)}">Add to price history</button>`:""}
     </span>
     ${st==="bought"?`<span class="pricefields">
       <input type="text" inputmode="decimal" id="paid-${esc(id)}" data-act="paid" data-id="${esc(id)}" placeholder="Paid €" aria-label="What you paid for ${esc(name)}" value="${r.paid==null||isNaN(Number(r.paid))?"":Number(r.paid).toFixed(2).replace(".",",")}">
@@ -310,6 +311,66 @@ function budgetCard(t){
     <p class="muted small">Estimated checkout: ${eur(b.total)} · ${eur(t.spent)} purchased · ${eur(t.left)} still to buy. Pantry items are not counted.</p>
     ${budget==null?"":`<p class="small" aria-live="polite"><strong>${b.over?eur(-b.diff)+" over budget":eur(b.diff)+" under budget"}</strong> based on the estimated total. Enter actual prices for more accuracy.</p><div class="bar${b.over?" offer":""}" role="img" aria-label="Estimated spending ${eur(b.total)} of ${eur(budget)} budget"><i style="--v:${Math.min(100,budget?b.total/budget*100:100).toFixed(1)}"></i></div>`}</section>`;
 }
+/* ---------- Price history (2.4) ---------- */
+const priceLog=()=>PWP.cleanLog(S.settings.priceLog);
+const shortName=n=>String(n).replace(/\s*\([^)]*\)\s*$/,"");
+const perUnit=u=>"/ "+PWP.UNIT_LABEL[u];
+const ageText=a=>a<=0?"today":a===1?"yesterday":a+" days ago";
+/* Typed store names match known ones ignoring case, so "hofer" and "HOFER" are one store. */
+const canonStore=t=>{const k=PWP.storeKey(t);return [...STORE_OPTS.map(o=>o[1]),...PWP.knownStores(priceLog())].find(n=>PWP.storeKey(n)===k)||String(t).trim()};
+function savePriceLog(log){S.settings.priceLog=log;putSettings()}
+function viewPrices(){
+  const log=priceLog(),td=today(),d=S.priceDraft||null,open=!!S.pricesOpen||!!d;
+  let h=`<section class="card" aria-labelledby="h-prices"><div class="row between"><h3 id="h-prices">${ic("trend")}Price history</h3><button class="chip" type="button" data-act="pricestoggle" aria-expanded="${open}" aria-controls="prices-body">${open?"Hide":"Show"} · ${log.length}</button></div>`;
+  if(!open)return h+`<p class="muted small">Prices you confirm here are compared per kg, litre or item. They are your own records, not live shop prices.</p></section>`;
+  h+=`<div id="prices-body" style="display:flex;flex-direction:column;gap:14px"><p class="muted small">Your own confirmed purchases. Amounts are compared per kg, litre or item, and only for the same product. Dates show how old each price is; a past price is not today's price.</p>`;
+  const all=items(),sel=d?(d.other?"__other":d.itemKey):"";
+  h+=`<form data-form="price" class="grid2" novalidate>
+    <label class="f" for="pr-item" style="grid-column:1/-1">Product<select id="pr-item" data-act="priceitem" required><option value="" ${sel===""?"selected":""} disabled>Choose a product</option>${all.map(i=>`<option value="${esc(i[0])}" ${sel===i[0]?"selected":""}>${esc(shortName(i[2]))}</option>`).join("")}<option value="__other" ${sel==="__other"?"selected":""}>Other product…</option></select></label>
+    <label class="f" for="pr-name" id="pr-name-wrap" style="grid-column:1/-1" ${sel==="__other"?"":"hidden"}>Product name<input type="text" id="pr-name" maxlength="80" value="${esc(d&&d.other?d.itemName:"")}" placeholder="e.g. Greek yogurt 1 kg"></label>
+    <label class="f" for="pr-store">Store<input type="text" id="pr-store" list="pr-stores" maxlength="60" value="${esc(d?d.store:"")}" placeholder="e.g. HOFER" autocomplete="off"></label>
+    <datalist id="pr-stores">${[...new Set(STORE_OPTS.filter(o=>o[0]!=="PANTRY").map(o=>o[1]).concat(PWP.knownStores(log)))].map(s=>`<option value="${esc(s)}">`).join("")}</datalist>
+    <label class="f" for="pr-total">Total paid, €<input type="text" id="pr-total" inputmode="decimal" value="${esc(d?d.total:"")}" placeholder="2,49" required></label>
+    <label class="f" for="pr-amount">Amount bought<input type="text" id="pr-amount" value="${esc(d?d.amount:"")}" placeholder="550 g, 1 L, 6" required aria-describedby="pr-amt-help"></label>
+    <label class="f" for="pr-date">Date<input type="date" id="pr-date" value="${esc(d?d.date:td)}" max="${td}" required></label>
+    <label class="f" style="flex-direction:row;align-items:center;gap:8px;grid-column:1/-1"><input type="checkbox" id="pr-promo" ${d&&d.promo?"checked":""}> On offer or multi-buy price</label>
+    <p class="muted small" id="pr-amt-help" style="grid-column:1/-1">Amount: g, kg, ml, cl, dl, L, or a plain count. Kg and litres are never converted into each other.</p>
+    <p class="small" id="pr-msg" role="alert" style="grid-column:1/-1;color:var(--offer)"></p>
+    <div class="row" style="grid-column:1/-1"><button class="btn" type="submit">${d&&d.id?"Save changes":"Add to history"}</button>${d?`<button class="btn ghost" type="button" data-act="pricecancel">Cancel</button>`:""}</div></form>`;
+  const prods=PWP.products(log);
+  if(!prods.length)h+=`<div class="empty"><span class="art">${ic("trend")}</span><b>No prices yet</b><span class="small">After you mark something Bought with a price, tap “Add to price history” on that row. Or add a purchase above.</span></div>`;
+  prods.forEach(p=>{
+    const groups=PWP.compareItem(log,p.item,td),openP=S.priceItem===p.item;
+    h+=`<div class="group"><div class="ghead"><h3 style="font-size:1rem">${esc(shortName(p.name))}</h3><span class="gtot">${p.count} ${p.count===1?"entry":"entries"}</span></div>`;
+    groups.forEach(g=>{
+      const lr=g.lowestRegular,lp=g.lowestPromo;
+      h+=`<p class="small">${lr?`<b>Lowest recorded: ${eur(lr.price)} ${perUnit(g.unit)}</b>${lr.store?" at "+esc(lr.store):" (store not recorded)"}<span class="meta">Recorded ${fmtDate(lr.date,{day:"numeric",month:"short",year:"numeric"})}, ${ageText(lr.age)}. ${lr.stale?`<b style="color:var(--offer)">Old price: check before relying on it.</b> `:""}Your record, not a current shop price.</span>`:`<span class="muted">No regular-price entries per ${PWP.UNIT_LABEL[g.unit]} yet.</span>`}
+        ${g.cheapestStore&&g.stores.length>1?`<span class="meta">By store: ${g.stores.map(s=>esc(s.store)+" "+eur(s.price)).join(" · ")}</span>`:""}
+        ${lp?`<span class="meta"><span class="tag offer">On offer</span> ${eur(lp.price)} ${perUnit(g.unit)}${lp.store?" at "+esc(lp.store):""}, ${fmtDate(lp.date,{day:"numeric",month:"short"})}. Offers are kept out of the lowest price.</span>`:""}
+        ${g.outliers.size?`<span class="meta"><span class="tag offer">Check</span> ${g.outliers.size} unusual ${g.outliers.size===1?"price is":"prices are"} left out (far from the typical ${eur(g.median)} ${perUnit(g.unit)}).</span>`:""}</p>`;
+    });
+    h+=`<button class="chip" type="button" data-act="priceprod" data-item="${esc(p.item)}" aria-expanded="${openP}">${openP?"Hide entries":"Show entries"}</button>`;
+    if(openP){
+      const out=new Set(groups.flatMap(g=>[...g.outliers]));
+      h+=`<ul>${log.filter(o=>o.item===p.item).sort((a,b)=>a.date<b.date?1:a.date>b.date?-1:0).map(o=>`<li class="item"><span><span class="name">${esc(o.store||"Store not recorded")} · ${fmtDate(o.date,{day:"numeric",month:"short",year:"numeric"})}</span><span class="meta">${eur(o.total)} for ${esc(o.amount)} = ${eur(o.price)} ${perUnit(o.unit)}${o.promo?' <span class="tag offer">On offer</span>':""}${out.has(o.id)?' <span class="tag offer">Unusual</span>':""}</span></span>
+        <span class="acts"><button class="chip" type="button" data-act="priceedit" data-id="${esc(o.id)}" aria-label="Edit ${esc(shortName(o.name))} at ${esc(o.store||"unknown store")} on ${fmtDate(o.date)}">Edit</button><button class="chip" type="button" data-act="pricedel" data-id="${esc(o.id)}" aria-label="Delete ${esc(shortName(o.name))} at ${esc(o.store||"unknown store")} on ${fmtDate(o.date)}">Delete</button></span></li>`).join("")}</ul>`;
+    }
+    h+=`</div>`;
+  });
+  return h+`</div></section>`;
+}
+function readPriceForm(){
+  const sel=$("#pr-item").value,other=sel==="__other",it=items().find(i=>i[0]===sel);
+  return {itemKey:other?"":sel,itemName:other?$("#pr-name").value:(it?shortName(it[2]):""),store:$("#pr-store").value,total:$("#pr-total").value,amount:$("#pr-amount").value,date:$("#pr-date").value,promo:$("#pr-promo").checked,id:(S.priceDraft||{}).id};
+}
+function submitPrice(){
+  const f=readPriceForm();f.store=canonStore(f.store);const r=PWP.makeObs(f,today(),"p-"+Date.now().toString(36)+Math.random().toString(36).slice(2,6));
+  if(!r.ok){$("#pr-msg").textContent=r.error;return}
+  const u=PWP.upsertObs(priceLog(),r.obs);
+  if(!u.ok){$("#pr-msg").textContent=u.error;return}
+  savePriceLog(u.log);S.priceDraft=null;S.pricesOpen=true;S.priceItem=r.obs.item;toast(f.id?"Price updated":"Added to price history");render();
+}
+
 function viewShop(){
   const t=tripTotals(S.trip);const cur=tripOf(today());const all=items();const ed=S.editList;
   let html=`<section class="row between"><div><h2>Grocery list</h2><p class="muted small">${ed?"Editing your list":"Everything you need for this two-week prep"}</p></div>
@@ -369,6 +430,7 @@ function viewShop(){
     html+=`</tbody></table></div><p class="muted small">“vs plan” compares what you spent with my planned total minus what you already had.</p></section>`;
   }
   if(!trips.length&&!ed)html+=`<section class="card"><div class="empty"><span class="art">${ic("cart")}</span><b>Your spending history starts here</b><span class="small">Mark items as bought and add what you paid. Each trip is saved so you can compare against your plan.</span></div></section>`;
+  if(!ed)html+=viewPrices();
   if(!ed)html+=`<section class="row"><button class="btn danger" type="button" data-act="reset">Reset this trip</button></section>`;
   return html;
 }
@@ -575,6 +637,16 @@ main.addEventListener("click",e=>{
   else if(a==="eat"){const d=b.dataset.day,sl=b.dataset.slot;const x=Object.assign({},(S.log[d]||{})[sl]);x.eaten=!x.eaten;x.meal=b.dataset.meal;putLog(d,sl,x);keepFocus(()=>render(),null,`[data-act=eat][data-day="${d}"][data-slot="${sl}"]`)}
   else if(a==="delw"){putWeight(b.dataset.day,null);render()}
   else if(a==="ics")downloadIcs();
+  else if(a==="pricestoggle"){S.pricesOpen=!S.pricesOpen;if(!S.pricesOpen)S.priceDraft=null;render()}
+  else if(a==="priceprod"){const it=b.dataset.item;S.priceItem=S.priceItem===it?null:it;S.pricesOpen=true;keepFocus(()=>render(),null,`[data-act=priceprod][data-item="${CSS.escape(it)}"]`)}
+  else if(a==="pricecancel"){S.priceDraft=null;render()}
+  else if(a==="pricedraft"){const id=b.dataset.id,it=items().find(i=>i[0]===id),r=(S.items[S.trip]||{})[id]||{};
+    S.priceDraft={itemKey:id,itemName:it?shortName(it[2]):"",store:r.store||"",total:r.paid==null?"":String(r.paid).replace(".",","),amount:"",date:today(),promo:false};S.pricesOpen=true;render();
+    const h=$("#h-prices");if(h)h.scrollIntoView({block:"start"});const am=$("#pr-amount");if(am)am.focus()}
+  else if(a==="priceedit"){const o=priceLog().find(x=>x.id===b.dataset.id);if(!o)return;const known=items().some(i=>i[0]===o.item);
+    S.priceDraft={id:o.id,itemKey:known?o.item:"",other:!known,itemName:o.name,store:o.store,total:String(o.total).replace(".",","),amount:o.amount,date:o.date,promo:!!o.promo};S.pricesOpen=true;render();
+    const h=$("#h-prices");if(h)h.scrollIntoView({block:"start"});const am=$("#pr-amount");if(am)am.focus()}
+  else if(a==="pricedel"){if(b.dataset.confirm){savePriceLog(PWP.removeObs(priceLog(),b.dataset.id));toast("Deleted from price history");render()}else{b.dataset.confirm="1";b.textContent="Tap again"}}
   else if(a==="editlist"){S.editList=!S.editList;render()}
   else if(a==="rmitem"){const id=b.dataset.id;const st=S.settings;
     if(ITEMS.some(i=>i[0]===id)){st.hiddenItems=(st.hiddenItems||[]).concat([id])}else{st.customItems=(st.customItems||[]).filter(c=>c.id!==id)}
@@ -600,6 +672,7 @@ main.addEventListener("click",e=>{
 main.addEventListener("change",e=>{
   const el=e.target,a=el.dataset.act;if(!a)return;
   if(a==="trip"){S.trip=el.value;S.pinned={};render()}
+  else if(a==="priceitem"){const w=$("#pr-name-wrap");if(w)w.hidden=el.value!=="__other";if(el.value==="__other"&&$("#pr-name"))$("#pr-name").focus()}
   else if(a==="logtrip"){S.logTrip=el.value;render()}
   else if(a==="paid"||a==="store"){const id=el.dataset.id;const r=Object.assign({status:"bought",paid:null,store:""},(S.items[S.trip]||{})[id]);
     if(a==="paid"){const n=num(el.value);r.paid=el.value.trim()===""||n==null?null:Math.round(n*100)/100}else r.store=el.value.trim().slice(0,60);
@@ -618,6 +691,7 @@ main.addEventListener("submit",e=>{
     const c={id:"u-"+Date.now().toString(36),name:name.slice(0,80),buy:$("#ni-buy").value.trim().slice(0,40),price:num($("#ni-price").value)||0,store:$("#ni-store").value};
     S.settings.customItems=(S.settings.customItems||[]).concat([c]);putSettings();toast("Added to your list");render();return}
   if(fm==="recipe"){e.preventDefault();saveRecipe();return}
+  if(fm==="price"){e.preventDefault();submitPrice();return}
   if(fm!=="weight")return;e.preventDefault();
   const d=$("#wday").value,kg=num($("#wkg").value);if(!d||!kg||kg<30||kg>300){toast("Enter a weight between 30 and 300 kg");return}
   putWeight(d,Math.round(kg*10)/10);

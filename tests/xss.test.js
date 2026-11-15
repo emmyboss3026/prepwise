@@ -28,7 +28,7 @@ function boot(storedJson) {
     localStorage: { getItem: k => (k in store ? store[k] : null), setItem: (k, v) => { store[k] = String(v); }, get length() { return 0; }, key: () => null },
     matchMedia: () => ({ matches: false, addEventListener() {} }),
     setTimeout: () => 0, clearInterval() {}, setInterval: () => 0, addEventListener() {}, scrollTo() {},
-    navigator: {}, location: { origin: "http://x", pathname: "/" }
+    navigator: {}, location: { origin: "http://x", pathname: "/" }, URL: { revokeObjectURL() {}, createObjectURL: () => "blob:x" }, CSS: { escape: s => s }
   };
   ctx.window = ctx; ctx.self = ctx;
   vm.createContext(ctx);
@@ -122,9 +122,9 @@ test("toasts and status text use textContent, not innerHTML", () => {
   assert.match(app, /\$\("#si-msg"\)\.textContent=/);
 });
 test("every innerHTML assignment in app.js is accounted for", () => {
-  // Reviewed sinks: render() main, timers box, chart svg, theme icon. Adding a new one must be a conscious decision.
+  // Reviewed sinks: render() main, timers box, chart svg (2), theme icon, photo preview box. Adding a new one must be a conscious decision.
   const count = (read("js/app.js").match(/\.innerHTML\s*=/g) || []).length;
-  assert.equal(count, 5);
+  assert.equal(count, 6);
 });
 
 /* ---------- Prototype-key and numeric hardening in core.js ---------- */
@@ -195,4 +195,32 @@ test("recommendations card is honest: past prices, dates, no live-price claims, 
   const off = String(ctx.viewShop());
   assert.match(off, /Recommendations are off/);
   assert.ok(!/Possible saving/.test(off));
+});
+
+/* ---------- Local photo preview (2.3 first step) ---------- */
+test("photo preview: only JPG/PNG/WebP up to 5 MB are accepted; nothing else is guessed", () => {
+  const ctx = boot("{}");
+  const ok = { type: "image/jpeg", size: 1024, name: "a.jpg" };
+  assert.equal(ctx.photoProblem(ok), "");
+  assert.equal(ctx.photoProblem({ type: "image/webp", size: 5 * 1024 * 1024, name: "b.webp" }), "");
+  for (const bad of [{ type: "image/heic", size: 10 }, { type: "application/pdf", size: 10 }, { type: "image/svg+xml", size: 10 }, { type: "image/jpeg", size: 0 }, { type: "image/jpeg", size: 5 * 1024 * 1024 + 1 }, { type: "", size: 10 }])
+    assert.match(ctx.photoProblem(bad), /JPG, PNG or WebP/, JSON.stringify(bad));
+  assert.equal(ctx.photoProblem(null), "");
+});
+test("photo preview never touches storage or the network and is not linked to a saved price", () => {
+  const app = read("js/app.js");
+  const photoCode = app.slice(app.indexOf("/* Photo preview is local-only"), app.indexOf("function viewPrices"));
+  for (const w of ["localStorage", "fetch(", "sb.", "putSettings", "FileReader", "readAsDataURL", "canvas"]) assert.ok(!photoCode.includes(w), w);
+  assert.ok(!/photo|image/i.test(read("js/prices.js")), "price observations carry no photo field");
+  assert.match(app, /clearPricePhoto\(\);S\.priceDraft=null;S\.pricesOpen=true;S\.priceItem/, "successful save drops the preview");
+  assert.ok(!/capture=/.test(app), "file input must offer the gallery as well as the camera");
+});
+test("photo file name and object URL are escaped in the preview markup", () => {
+  const ctx = boot("{}");
+  vm.runInContext(`pricePhotoUrl='blob:x"><b id=PWNA>';pricePhotoName='<b id=PWNA>"';`, ctx);
+  const html = String(ctx.pricePhotoMarkup());
+  for (const bad of LEAKS) assert.ok(!html.includes(bad), bad);
+  assert.ok(html.includes("&lt;b id=PWNA&gt;"));
+  vm.runInContext("clearPricePhoto()", ctx);
+  assert.equal(String(ctx.pricePhotoMarkup()), "");
 });

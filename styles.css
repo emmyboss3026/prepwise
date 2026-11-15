@@ -326,3 +326,10 @@ dialog::backdrop{background:rgb(10 20 14 / .5)}
   .skel{animation:none}
 }
 @media print{header.top,nav.tabs,.timers,.toast{display:none!important}body{padding:0}}
+
+/* Optional local-only photo preview in price history */
+.price-photo-box{grid-column:1/-1;min-width:0;padding:12px;border:1px dashed var(--line2);border-radius:var(--r);background:var(--surface2)}
+.price-photo-box input[type=file]{max-width:100%;width:100%;font:inherit}
+.price-photo-box figure{margin:10px 0;display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap}
+.price-photo-preview{width:min(100%,240px);height:180px;object-fit:contain;background:var(--surface);border:1px solid var(--line);border-radius:12px}
+.price-photo-box figcaption{overflow-wrap:anywhere;max-width:100%}

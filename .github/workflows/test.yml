@@ -7,6 +7,7 @@ on:
       - "index.html"
       - "styles.css"
       - "styles/**"
+      - "scripts/**"
       - ".github/workflows/test.yml"
   push:
     branches:
@@ -29,3 +30,27 @@ jobs:
           node --check js/photos.js
       - name: Unit, security and structural tests
         run: node --test tests/*.test.js
+
+  browser-nova:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install pinned browser test runner
+        run: npm install --no-save --ignore-scripts playwright@1.56.1
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Test mobile, desktop, product names and navigation
+        run: node scripts/nova-smoke.cjs
+      - name: Upload review screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: prepwise-nova-browser-screenshots
+          path: test-artifacts/*.png
+          if-no-files-found: ignore
+          retention-days: 7

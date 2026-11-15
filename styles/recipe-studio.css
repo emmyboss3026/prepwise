@@ -56,3 +56,6 @@
 @media(prefers-reduced-motion:reduce){
  .studio-promo,.studio-hero,.studio-video-preview{animation:none!important}
 }
+
+.grocery-estimate{grid-column:1/-1;width:100%;max-width:220px;margin-top:2px}
+.grocery-estimate input{min-height:42px}

@@ -291,7 +291,7 @@ function tripOptions(sel){
    Generic pictures are only examples; they never claim to show the exact brand/package. */
 function safeGroceryImageUrl(raw){
   if(typeof raw!=="string"||raw.length>1500)return "";
-  try{const u=new URL(raw);return u.protocol==="https:"&&!!u.hostname&&!u.username&&!u.password?u.href:""}catch(e){return ""}
+  try{const u=new URL(raw);if(u.protocol!=="https:"||!u.hostname||u.username||u.password)return "";if(u.href.length>500&&!["upload.wikimedia.org","commons.wikimedia.org"].includes(u.hostname))return "";return u.href}catch(e){return ""}
 }
 const PHOTO_CACHE_KEY="prepwise-commons-photos-v1";
 let photoObserver=null,photoPending=0,photoPickId=null,photoChoices=[],photoSearchToken=0,photoSearchError="",photoSearchTerm="";

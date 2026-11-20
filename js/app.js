@@ -6,8 +6,9 @@ const {ANCHOR,LKEY,esc,num,r1,eur,iso,parse,addDays,diffDays,scaleAmt,stepParts}
 
 /* ---------- Plan data ---------- */
 const STORES={
-  SPAR:{name:"Stop 1 · SPAR / INTERSPAR",note:"Chicken: AIA Hendl-Filet 550 g, €4.49 until 18 Nov."},
-  HOFER:{name:"Stop 2 · HOFER",note:"Beef, dairy, eggs, potatoes and the basics."},
+  PENNY:{name:"Stop 1 · PENNY",note:"Offers 18–25 Nov: chicken inner fillet (Federike) €6.99/kg and beef mince €8.99/kg, both sold by weight."},
+  SPAR:{name:"SPAR / INTERSPAR",note:"Items you added."},
+  HOFER:{name:"Stop 2 · HOFER",note:"Dairy, eggs, potatoes and the basics."},
   BILLA:{name:"Stop 3 · BILLA",note:"Liquid egg whites, pasta and basmati."},
   LIDL:{name:"Lidl",note:"Items you added."},
   OTHER:{name:"Other stores",note:"Items you added."},
@@ -16,9 +17,8 @@ const STORES={
 const DISH=["Pancakes","Burritos","Cajun","Alfredo","Middle Eastern","Mexican"];
 // id, store, name, buy, price, source, uses
 const ITEMS=[
- ["chicken","SPAR","Chicken breast fillet (AIA, 550 g)","6 packs",26.94,"offer",{"Cajun":"817 g","Alfredo":"817 g","Middle Eastern":"817 g","Mexican":"849 g"}],
- ["beef","HOFER","Beef mince, 100% beef (Sonnhof, 800 g)","2 packs",18.98,"store",{"Burritos":"1,600 g of 1,800 g"}],
- ["beef2","HOFER","Beef mince, small pack","~250 g",3.50,"est",{"Burritos":"top up to 1,800 g"}],
+ ["chicken","PENNY","Chicken inner fillet (Federike, sold per kg)","3.34 kg",23.35,"offer",{"Cajun":"827 g","Alfredo":"827 g","Middle Eastern":"827 g","Mexican":"859 g"}],
+ ["beef","PENNY","Beef mince, 100% beef (Rinder Faschiertes, per kg)","1.8 kg",16.18,"offer",{"Burritos":"1,800 g"}],
  ["eggs","HOFER","Eggs","18 (3 × 6)",8.37,"store",{"Burritos":"16"}],
  ["topfen","HOFER","Magertopfen or Skyr, 250 g","6 tubs",5.94,"est",{"Pancakes":"1,440 g"}],
  ["potato","HOFER","Potatoes","3 kg",3.75,"est",{"Burritos":"~1,670 g raw","Cajun":"~1,330 g raw"}],
@@ -88,7 +88,7 @@ function R(){
 }
 function bySlot(sl){return Object.values(R()).filter(r=>r.slot===sl)}
 const DINNERS=["Cajun","Cajun","Alfredo","Alfredo","Middle Eastern","Middle Eastern","Mexican","Mexican"];
-const STORE_OPTS=[["SPAR","SPAR / INTERSPAR"],["HOFER","HOFER"],["BILLA","BILLA"],["LIDL","Lidl"],["OTHER","Other store"],["PANTRY","Pantry"]];
+const STORE_OPTS=[["PENNY","PENNY"],["SPAR","SPAR / INTERSPAR"],["HOFER","HOFER"],["BILLA","BILLA"],["LIDL","Lidl"],["OTHER","Other store"],["PANTRY","Pantry"]];
 const ACTIVITY=[["1.2","Mostly sitting"],["1.375","Light (1–3 workouts/week)"],["1.55","Moderate (3–5/week)"],["1.725","Hard (6–7/week)"],["1.9","Very hard or physical job"]];
 
 function items(trip=S.trip){
@@ -410,7 +410,7 @@ function itemRow(i,extra){
   const unknownPrice=src==="mine"&&!(Number(price)>0);
   const right=st!=="bought"&&unknownPrice?'Price TBD<small>Estimate not set</small>':st==="bought"&&r.paid!=null?`${eur(r.paid)}<small>you paid</small>`:st==="have"?`${eur(price)}<small>at home</small>`:`${eur(price)}<small>${src==="est"?"est.":"store price"}</small>`;
   const diff=st==="bought"&&r.paid!=null?(price-r.paid>=0?`<span class="diff save">${eur(price-r.paid)} under my price</span>`:`<span class="diff more">${eur(r.paid-price)} over my price</span>`):"";
-  const tag=src==="offer"?'<span class="tag offer">Offer to 18 Nov</span>':"";
+  const tag=src==="offer"?'<span class="tag offer">Offer to 25 Nov</span>':"";
   return `<li class="item${st?" is-"+st:""}">
     <span class="grocery-product">${groceryThumb(i)}<span class="grocery-product-info"><span class="grocery-product-eyebrow">Product to buy</span><span class="name" id="grocery-name-${esc(id)}" title="${esc(name)}">${esc(name)}</span><span class="meta">${extra}</span>${tag}</span></span>
     <span class="price">${right}</span>
@@ -795,7 +795,7 @@ function viewCook(){
   <section class="card"><h3>What you cook</h3><div class="tablewrap"><table><thead><tr><th>Meal (tap for the guide)</th><th>Batch</th><th class="n">kcal each</th></tr></thead><tbody>
    ${Object.values(R()).map(m=>`<tr><td><button class="chip" type="button" data-act="gocook" data-id="${esc(m.id)}">${esc(m.name)}</button></td><td>${esc(m.serves)} × ${esc(m.servingLabel||"")}</td><td class="n">${Math.round(num(m.kcal)||0)}</td></tr>`).join("")}</tbody></table></div>
    <p class="muted small">Suggested order: burritos and pancakes first, then Cajun, Alfredo, Middle Eastern and Mexican. Keep the next 3 days in the fridge and freeze the rest.</p></section>
-  <section class="card"><h3>Chicken split (3,300 g)</h3><p>Cajun 817 g · Alfredo 817 g · Middle Eastern 817 g · Mexican 849 g</p></section>
+  <section class="card"><h3>Chicken split (3,340 g)</h3><p>Cajun 827 g · Alfredo 827 g · Middle Eastern 827 g · Mexican 859 g</p></section>
   <section class="card"><h3>Account</h3><p class="small muted">${S.user?`Signed in as ${esc(S.user.email)}. Everything syncs.`:sb?"Not signed in: data is saved on this device only.":"Sync isn't available right now; data is saved on this device."}</p>
    <label class="f" for="dname">Your name (for the greeting)<input type="text" id="dname" data-act="setting" data-k="displayName" maxlength="30" autocomplete="given-name" value="${esc(S.settings.displayName||"")}" placeholder="Optional"></label>
    <div class="row">${S.user?`<button class="btn ghost" type="button" data-act="signout">Sign out</button>`:sb?`<button class="btn" type="button" data-act="signin">Sign in to sync</button>`:""}</div></section>`;

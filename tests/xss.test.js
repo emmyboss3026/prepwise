@@ -182,7 +182,7 @@ test("recommendations card is honest: past prices, dates, no live-price claims, 
   const noHist = String(ctx.viewShop());
   assert.match(noHist, /No price history yet/);
   S.settings.priceLog = [
-    { id: "a", item: "chicken", name: "Chicken", store: "SPAR / INTERSPAR", total: 10, amount: "1 kg", base: 1, unit: "kg", price: 10, date: td, cur: "EUR", promo: 0 },
+    { id: "a", item: "chicken", name: "Chicken", store: "PENNY", total: 10, amount: "1 kg", base: 1, unit: "kg", price: 10, date: td, cur: "EUR", promo: 0 },
     { id: "b", item: "chicken", name: "Chicken", store: "HOFER", total: 5, amount: "1 kg", base: 1, unit: "kg", price: 5, date: td, cur: "EUR", promo: 0 }
   ];
   const html = String(ctx.viewShop());

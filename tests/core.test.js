@@ -171,7 +171,7 @@ test("recipes.js is byte-identical to the owner's agreed version", () => {
   const lf = Buffer.from(buf.toString("utf8").split("\r\n").join("\n")); // same hash whether git checked out LF or CRLF
   const sha = crypto.createHash("sha256").update(lf).digest("hex");
   // Update this hash only when the owner deliberately changes a default recipe.
-  assert.equal(sha, "0517631cc3188fe2a87a4838cc367c9b03ebadcf7322e84d70f5ea2285b90d94");
+  assert.equal(sha, "cbbfe7e95acc11512fcad793df1fe1943aa9923e94d0460c00ac732471fa3a78");
 });
 test("every default recipe has the fields the app relies on", () => {
   global.window = {};

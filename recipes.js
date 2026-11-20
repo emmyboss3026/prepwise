@@ -62,7 +62,7 @@ window.DEFAULT_RECIPES = {
     kcal: 711, p: 63.7, c: 76.9, f: 13.4, fib: 13,
     oven: [["Potatoes", "Roasted with the burrito batch (or 190 °C fan, middle rack, 25–30 min)"], ["Hob", "Chicken medium-high · sauce low-medium"], ["Safe", "Chicken 74 °C inside"]],
     ingredients: [
-      ["817 g", "Chicken breast"], ["578 g", "Roasted potatoes, cooked (from the 3 kg batch)"], ["600 g", "Frozen mixed vegetables"],
+      ["827 g", "Chicken breast"], ["578 g", "Roasted potatoes, cooked (from the 3 kg batch)"], ["600 g", "Frozen mixed vegetables"],
       ["200 ml", "Light evaporated milk"], ["120 g", "Light herb/garlic cream cheese"], ["26–30 g", "Tomato paste"],
       ["1 small", "Onion, finely chopped"], ["10 g", "Butter"], ["to taste", "Cajun seasoning, paprika, garlic powder, onion powder, Italian herbs, salt, pepper"]
     ],
@@ -86,7 +86,7 @@ window.DEFAULT_RECIPES = {
     kcal: 699, p: 69, c: 64.6, f: 13.9, fib: 7.5,
     oven: [["Hob", "Pasta water boiling · chicken medium-high · sauce low-medium"], ["Pasta", "1 minute less than the package"], ["Safe", "Chicken 74 °C inside"]],
     ingredients: [
-      ["817 g", "Chicken breast"], ["230 g", "Dry pasta or spaghetti"], ["150 g", "Passata"], ["300 ml", "Light evaporated milk"],
+      ["827 g", "Chicken breast"], ["230 g", "Dry pasta or spaghetti"], ["150 g", "Passata"], ["300 ml", "Light evaporated milk"],
       ["130 g", "Light cream cheese, plain"], ["30 g", "Grated Parmesan or Grana"], ["600 g", "Frozen mixed vegetables"],
       ["1 small", "Onion, finely chopped"], ["4", "Garlic cloves, minced"], ["~10 g", "Light butter"],
       ["to taste", "Italian herbs, garlic powder, paprika, salt, pepper; chilli flakes optional"]
@@ -113,7 +113,7 @@ window.DEFAULT_RECIPES = {
     kcal: 702, p: 57, c: 72.9, f: 18.4, fib: 4,
     oven: [["Oven", "190 °C fan (plain three-blade fan symbol)"], ["Rack", "Middle, single layer"], ["Time", "18–22 min to 74 °C"], ["Finish", "Optional top grill (zig-zag) ~200 °C, 2–4 min"]],
     ingredients: [
-      ["817 g", "Chicken breast"], ["6 g", "Paprika"], ["4 g", "Garlic powder"], ["4 g", "Onion powder"], ["3 g", "Cumin"], ["3 g", "Oregano"],
+      ["827 g", "Chicken breast"], ["6 g", "Paprika"], ["4 g", "Garlic powder"], ["4 g", "Onion powder"], ["3 g", "Cumin"], ["3 g", "Oregano"],
       ["2 g", "Dried parsley"], ["4–5 g", "Salt"], ["15 g", "Tomato paste"], ["10–15 g", "Honey"], ["10–15 g", "Olive oil"], ["1", "Lemon, juiced"],
       ["270 g", "Dry basmati rice"], ["~420 ml", "Water (check the rice package)"], ["10 g", "Butter"], ["100–120 g", "Onion, finely chopped"],
       ["1 tsp", "Turmeric"], ["1 tsp", "Paprika (rice)"], ["½–1 tsp", "Cumin (rice)"], ["1 tsp", "Italian herbs"],
@@ -143,7 +143,7 @@ window.DEFAULT_RECIPES = {
     kcal: 709, p: 59.5, c: 81.3, f: 13.9, fib: 4,
     oven: [["Chicken", "190 °C fan, middle rack, 18–24 min to 74 °C"], ["Corn mix", "180 °C fan, middle rack, 15–18 min, stir halfway"], ["Finish", "Optional top grill 2–4 min"]],
     ingredients: [
-      ["849 g", "Chicken breast"], ["6.4 g", "Paprika"], ["4 g", "Cumin"], ["4 g", "Garlic powder"], ["3.2 g", "Onion powder"],
+      ["859 g", "Chicken breast"], ["6.4 g", "Paprika"], ["4 g", "Cumin"], ["4 g", "Garlic powder"], ["3.2 g", "Onion powder"],
       ["~2 g", "Chilli powder"], ["4 g", "Salt"], ["~8 g", "Olive oil (chicken)"], ["½", "Lime, juiced (chicken)"],
       ["320 g", "Dry basmati rice"], ["~480–520 ml", "Water (check the rice package)"],
       ["360 g", "Sweetcorn, drained"], ["120–160 g", "Red pepper, diced"], ["80 g", "Red onion, diced"], ["4–8 g", "Olive oil (corn)"],
